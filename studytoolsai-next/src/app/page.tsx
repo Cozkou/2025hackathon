@@ -20,21 +20,23 @@ export default function Home() {
                     animation: gradient 8s linear infinite;
                 }
             `}</style>
-            <div className="container mx-auto px-4 h-screen">
-                <div className="flex flex-col md:flex-row items-center justify-between h-full py-8">
-                    {/* Left side - Branding */}
-                    <div className="md:w-1/2 text-center md:text-left mb-8 md:mb-0 ml-20">
-                        <h1 className="text-7xl font-bold mb-8 bg-gradient-to-r from-[#86efac] via-[#8B7FFF] to-[#B39DDB] text-transparent bg-clip-text font-['Poppins'] drop-shadow-lg animate-gradient">
+            
+            {/* Top Section */}
+            <div className="container mx-auto px-4 pt-16 pb-24">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-24">
+                    <div className="max-w-2xl">
+                        <h1 className="text-7xl font-bold mb-6 bg-gradient-to-r from-[#86efac] via-[#8B7FFF] to-[#B39DDB] text-transparent bg-clip-text font-['Poppins'] drop-shadow-lg animate-gradient">
                             StudyToolsAI
                         </h1>
-                        <p className="text-xl text-[#B39DDB]/70 font-['Inter'] leading-relaxed tracking-wide mt-4">
+                        <p className="text-xl text-[#B39DDB]/70 font-['Inter'] leading-relaxed tracking-wide">
                             Revise faster, smarter. Powered by AI
                         </p>
                     </div>
-
-                    {/* Right side - Login Form */}
-                    <div className="md:w-1/2 max-w-md w-full flex justify-center">
-                        <div className="bg-white/5 backdrop-blur-sm p-8 pr-10 mr-24 rounded-2xl shadow-2xl border border-[#8B7FFF]/20 w-full hover:border-[#8B7FFF]/40 transition-all duration-400">
+                    
+                    {/* Sign in Button */}
+                    <div className="w-[400px]">
+                        <div className="bg-white/5 backdrop-blur-sm p-6 rounded-2xl shadow-2xl border border-[#8B7FFF]/20 hover:border-[#8B7FFF]/40 transition-all duration-400">
                             <button
                                 type="button"
                                 className="w-full bg-white py-4 rounded-xl font-semibold hover:bg-gray-50 hover:scale-[1.02] transition-all duration-400 flex items-center justify-center space-x-3 shadow-lg text-gray-700"
@@ -47,6 +49,41 @@ export default function Home() {
                                 </svg>
                                 <span className="text-lg">Sign in with Google</span>
                             </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Features Section */}
+                <div className="mt-24">
+                    <h2 className="text-4xl font-bold text-center mb-16 text-white font-['Playfair_Display'] bg-gradient-to-r from-[#86efac] via-[#8B7FFF] to-[#B39DDB] text-transparent bg-clip-text">
+                        Your All-in-One Student Hub
+                    </h2>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+                        {/* Feature 1 */}
+                        <div className="bg-white/5 backdrop-blur-sm p-8 rounded-2xl border border-[#8B7FFF]/20 hover:border-[#8B7FFF]/40 transition-all duration-400 group hover:transform hover:scale-105">
+                            <h3 className="text-2xl font-bold text-white mb-3 font-['Poppins']">Past Paper Generator</h3>
+                            <p className="text-[#B39DDB]/70 leading-relaxed">
+                            Create mock exams in seconds using AI to match your course content and exam board.
+                            </p>
+                        </div>
+
+                        {/* Feature 2 */}
+                        <div className="bg-white/5 backdrop-blur-sm p-8 rounded-2xl border border-[#8B7FFF]/20 hover:border-[#8B7FFF]/40 transition-all duration-400 group hover:transform hover:scale-105">
+                            
+                            <h3 className="text-2xl font-bold text-white mb-3 font-['Poppins']">Flashcard Generator</h3>
+                            <p className="text-[#B39DDB]/70 leading-relaxed">
+                            Turn notes into smart flashcards with auto-generated questions and explanations
+                            </p>
+                        </div>
+
+                        {/* Feature 3 */}
+                        <div className="bg-white/5 backdrop-blur-sm p-8 rounded-2xl border border-[#8B7FFF]/20 hover:border-[#8B7FFF]/40 transition-all duration-400 group hover:transform hover:scale-105">
+                            
+                            <h3 className="text-2xl font-bold text-white mb-3 font-['Poppins']">Progress Tracking</h3>
+                            <p className="text-[#B39DDB]/70 leading-relaxed">
+                                Monitor your progress and optimize your study efficiency
+                            </p>
                         </div>
                     </div>
                 </div>
