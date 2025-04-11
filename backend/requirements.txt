@@ -5,3 +5,5 @@ python-multipart>=0.0.6  # For handling file uploads
 pydantic>=2.4.2
 aiofiles>=23.2.1  # For async file operations
 requests>=2.31.0  # For testing
+PyPDF2>=3.0.0    # For PDF processing
+reportlab>=4.0.0  # For PDF generation

@@ -1,11 +1,14 @@
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from enum import Enum
 from typing import Optional, Dict
-from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
 import uuid
 from datetime import datetime
+
+from services.paper_generator import PaperGeneratorService
 
 app = FastAPI()
 
@@ -17,6 +20,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Initialize services
+paper_service = PaperGeneratorService()
 
 # Constants
 UPLOAD_DIR = "uploads"
@@ -87,35 +93,42 @@ async def generate_paper(
     difficulty: DifficultyLevel = DifficultyLevel.SAME
 ):
     try:
-        # Save the uploaded PDF
-        filename = await save_upload_file(pdf_file)
-        
-        # Generate a unique ID for this paper
+        if not is_pdf(pdf_file.filename):
+            raise HTTPException(status_code=400, detail="Only PDF files are allowed")
+
+        # Generate paper ID
         paper_id = str(uuid.uuid4())
         
-        # Store metadata (in real app, this would go to a database)
+        # Process the paper using our service
+        generated_path = await paper_service.process_paper(
+            pdf_file,
+            difficulty,
+            paper_id
+        )
+        
+        # Store metadata
         default_name = f"Generated Paper - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
         paper_metadata[paper_id] = {
             "original_filename": pdf_file.filename,
             "generated_filename": default_name,
             "custom_name": None,
             "created_at": datetime.now().isoformat(),
-            "difficulty": difficulty
+            "difficulty": difficulty,
+            "file_path": generated_path
         }
         
         return {
             "status": "success",
-            "message": "PDF received successfully",
+            "message": "Paper generated successfully",
             "details": {
                 "paper_id": paper_id,
                 "default_name": default_name,
                 "original_filename": pdf_file.filename,
-                "difficulty_requested": difficulty,
-                "next_steps": "File saved and ready for LLM processing"
+                "difficulty_requested": difficulty
             }
         }
     except HTTPException as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise e
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -124,10 +137,15 @@ async def get_generated_paper(paper_id: str):
     if paper_id not in paper_metadata:
         raise HTTPException(status_code=404, detail="Paper not found")
     
-    return {
-        "paper_id": paper_id,
-        "metadata": paper_metadata[paper_id]
-    }
+    paper_path = await paper_service.get_paper(paper_id)
+    if not paper_path:
+        raise HTTPException(status_code=404, detail="Paper file not found")
+    
+    return FileResponse(
+        paper_path,
+        filename=f"{paper_metadata[paper_id]['custom_name'] or paper_metadata[paper_id]['generated_filename']}.pdf",
+        media_type="application/pdf"
+    )
 
 @app.put("/papers/{paper_id}/rename")
 async def rename_paper(paper_id: str, rename_data: PaperRename):
