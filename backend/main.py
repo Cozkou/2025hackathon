@@ -2,7 +2,7 @@ from fastapi import FastAPI, File, UploadFile, Form
 from enum import Enum
 from typing import Optional
 from fastapi.middleware.cors import CORSMiddleware
-
+from google_calendar import find_free_time_in_calendar
 app = FastAPI()
 
 # Add CORS middleware
@@ -26,7 +26,7 @@ def read_root():
 # Calendar Integration Endpoints
 @app.get("/calendar")
 async def get_calendar_events():
-    return {"message": "Calendar events will be implemented"}
+    return find_free_time_in_calendar()
 
 
 # Flashcard Endpoints
