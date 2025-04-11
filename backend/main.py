@@ -1,8 +1,10 @@
 from fastapi import FastAPI, File, UploadFile, Form
 from enum import Enum
-from typing import Optional
+from typing import List,Optional
 from fastapi.middleware.cors import CORSMiddleware
 from google_calendar import find_free_time_in_calendar
+from pydantic import BaseModel
+
 app = FastAPI()
 
 # Add CORS middleware
@@ -24,9 +26,27 @@ def read_root():
     return {"message": "Welcome to StudentTools API"}
 
 # Calendar Integration Endpoints
-@app.get("/calendar")
-async def get_calendar_events():
-    return find_free_time_in_calendar()
+
+# Input model for the calendar request
+class CalendarRequest(BaseModel):
+    date: str
+    start_time: str
+    end_time: str
+    constraints: Optional[List[str]] = []
+
+@app.post("/calendar")
+async def get_calendar_free_time(req: CalendarRequest):
+    try:
+        free_times = find_free_time_in_calendar(
+            date=req.date,
+            start_time=req.start_time,
+            end_time=req.end_time,
+            constraints=req.constraints or []
+        )
+        return {"free_time_slots": free_times}
+    except Exception as e:
+        return {"error": str(e)}
+
 
 
 # Flashcard Endpoints
