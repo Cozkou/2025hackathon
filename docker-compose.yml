@@ -8,7 +8,6 @@ services:
       - "8000:8000"
     volumes:
       - ./backend:/app
-      - backend_generated_papers:/app/generated_papers
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}

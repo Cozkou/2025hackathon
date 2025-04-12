@@ -1,7 +1,9 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import StreamingResponse
 from enum import Enum
 import uuid
+from datetime import datetime
+from io import BytesIO
 
 from services.paper_generator import PaperGeneratorService
 
@@ -19,18 +21,24 @@ async def generate_paper(
     difficulty: DifficultyLevel = "same"
 ):
     try:
-        paper_id = str(uuid.uuid4())
-        result = await paper_service.generate(pdf_file, difficulty, paper_id)
+        # Generate PDF bytes
+        pdf_bytes = await paper_service.generate(pdf_file, difficulty)
         
-        return result  # This will now return the text preview and length
+        # Create a filename with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"generated_paper_{timestamp}.pdf"
+        
+        # Create BytesIO object from PDF bytes
+        pdf_stream = BytesIO(pdf_bytes)
+        
+        # Return streaming response that will trigger download
+        return StreamingResponse(
+            pdf_stream,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename={filename}"
+            }
+        )
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@router.get("/{paper_id}")
-async def get_paper(paper_id: str):
-    paper_path = await paper_service.get_paper_path(paper_id)
-    if not paper_path:
-        raise HTTPException(status_code=404, detail="Paper not found")
-    
-    return FileResponse(paper_path, media_type="application/pdf") 
+        raise HTTPException(status_code=500, detail=str(e)) 
