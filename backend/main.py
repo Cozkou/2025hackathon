@@ -6,7 +6,6 @@ from google_calendar import create_event_in_calendar, find_free_time_in_calendar
 from pydantic import BaseModel
 from routers import paper_router, calendar_router
 import json
-from services.paper_generator import router as paper_generator_router
 
 class DifficultyLevel(str, Enum):
     SAME = "same"
@@ -26,7 +25,6 @@ app.add_middleware(
 
 # Add routers
 app.include_router(paper_router.router)
-app.include_router(paper_generator_router, prefix="/")
 app.include_router(calendar_router.router)
 
 @app.get("/")
