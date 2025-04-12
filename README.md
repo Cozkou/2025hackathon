@@ -111,7 +111,7 @@ A tool for students to generate practice papers, manage flashcards, and integrat
    docker compose up --build
    ```
 
-### �� Project Structure
+### 📁 Project Structure
 
 ```
 2025hackathon/
@@ -122,10 +122,10 @@ A tool for students to generate practice papers, manage flashcards, and integrat
 │   │   └── api/         # API endpoints
 │   ├── requirements.txt
 │   └── Dockerfile
-├── frontend/            # React frontend service
+├── studytoolsai-next/   # Next.js frontend service
 │   ├── src/
 │   │   ├── components/  # React components
-│   │   ├── pages/      # Page components
+│   │   ├── pages/      # Next.js pages
 │   │   ├── services/   # API services
 │   │   └── styles/     # CSS/styling files
 │   ├── package.json
@@ -190,7 +190,7 @@ uvicorn app.main:app --reload
 
 1. Local Setup (without Docker):
 ```bash
-cd frontend
+cd studytoolsai-next
 npm install
 npm run dev
 ```
@@ -230,7 +230,7 @@ docker compose logs -f
 
 # Specific service
 docker compose logs -f backend
-docker compose logs -f frontend
+docker compose logs -f studytoolsai-next
 ```
 
 4. Stop services:
