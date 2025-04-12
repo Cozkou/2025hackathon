@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
@@ -29,6 +29,15 @@ export default function Calendar() {
     
     // Time selection state
     const [isSelectingStart, setIsSelectingStart] = useState<boolean>(true);
+    
+    // Add new state for free time slots
+    const [freeSlots, setFreeSlots] = useState<Array<{start: string, end: string}>>([]);
+    const [isCheckingFreeTime, setIsCheckingFreeTime] = useState(false);
+    const [freeTimeError, setFreeTimeError] = useState<string | null>(null);
+    
+    // Add new state for slider values
+    const [sliderStartValue, setSliderStartValue] = useState<number>(9);
+    const [sliderEndValue, setSliderEndValue] = useState<number>(20);
     
     // Initialize with today's date
     useEffect(() => {
@@ -83,27 +92,53 @@ export default function Calendar() {
     };
     
     // Handle creating a new event
-    const handleCreateEvent = () => {
+    const handleCreateEvent = async () => {
         if (!selectedDate || !eventStartTime || !eventEndTime) return;
         
-        const newEvent: Event = {
-            id: Date.now().toString(),
-            title: 'Revision Session',
-            startTime: eventStartTime,
-            endTime: eventEndTime,
-            date: selectedDate
-        };
-        
-        setEvents([...events, newEvent]);
-        setIsModalOpen(false);
-        
-        // TODO: Sync with Google Calendar
-        // syncWithGoogleCalendar(newEvent);
+        try {
+            // Format the date and time for the API request
+            const formattedDate = selectedDate.toISOString().split('T')[0];
+            const startDateTime = `${formattedDate}T${eventStartTime}`;
+            const endDateTime = `${formattedDate}T${eventEndTime}`;
+            
+            // Make API request to create the event
+            const response = await fetch('/api/calendar/create-event', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    start: startDateTime,
+                    end: endDateTime,
+                    title: 'Revision Event',
+                    description: 'Study session',
+                }),
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to create event');
+            }
+            
+            const data = await response.json();
+            
+            if (data.success && data.event) {
+                // Add the new event to the events state
+                setEvents([...events, data.event]);
+                setIsModalOpen(false);
+            } else {
+                throw new Error('Failed to create event');
+            }
+        } catch (error) {
+            console.error('Error creating event:', error);
+            // You could add error handling UI here if needed
+        }
     };
     
     // Check if a time slot is within the selected range
     const isInTimeRange = (timeSlot: string): boolean => {
         const hour = parseInt(timeSlot.split(':')[0]);
+        if (startHour === null || endHour === null) return false;
         return hour >= startHour && hour < endHour;
     };
     
@@ -148,254 +183,333 @@ export default function Calendar() {
     
     const nextDays = getNextDays();
     
+    // Function to check free time slots
+    const checkFreeTime = async () => {
+        if (!selectedDate || startHour === null || endHour === null) return;
+
+        try {
+            setIsCheckingFreeTime(true);
+            setFreeTimeError(null);
+
+            // Format the date and time for the API request
+            const formattedDate = selectedDate.toISOString().split('T')[0];
+            const startTimeFormatted = `${startHour.toString().padStart(2, '0')}:00`;
+            const endTimeFormatted = `${endHour.toString().padStart(2, '0')}:00`;
+
+            // Make API request to our Next.js API route
+            const response = await fetch('/api/calendar/free-slots', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    date: formattedDate,
+                    startTime: startTimeFormatted,
+                    endTime: endTimeFormatted,
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to fetch free time slots');
+            }
+
+            const data = await response.json();
+            
+            if (data.freeSlots && Array.isArray(data.freeSlots)) {
+                setFreeSlots(data.freeSlots);
+            } else {
+                throw new Error('Invalid response format from server');
+            }
+        } catch (error) {
+            console.error('Error checking free time:', error);
+            setFreeTimeError(error instanceof Error ? error.message : 'Failed to check free time');
+            setFreeSlots([]);
+        } finally {
+            setIsCheckingFreeTime(false);
+        }
+    };
+    
+    // Add test function to manually set free slots
+    const testSetFreeSlots = (mockData: Array<{start: string, end: string}>) => {
+        setFreeSlots(mockData);
+    };
+
+    // Add to useEffect for testing - you can remove this later
+    useEffect(() => {
+        // Expose the test function to the window object for testing
+        (window as any).testSetFreeSlots = testSetFreeSlots;
+    }, []);
+
+    // Add helper function to check if a time slot is within any free slot
+    const isTimeSlotFree = (timeSlot: string): boolean => {
+        return freeSlots.some(freeSlot => {
+            const slotHour = parseInt(timeSlot.split(':')[0]);
+            const freeStartHour = parseInt(freeSlot.start.split(':')[0]);
+            const freeEndHour = parseInt(freeSlot.end.split(':')[0]);
+            return slotHour >= freeStartHour && slotHour < freeEndHour;
+        });
+    };
+
+    // Add helper function to get the full free slot for a time
+    const getFreeSlotForTime = (timeSlot: string) => {
+        return freeSlots.find(freeSlot => {
+            const slotHour = parseInt(timeSlot.split(':')[0]);
+            const freeStartHour = parseInt(freeSlot.start.split(':')[0]);
+            const freeEndHour = parseInt(freeSlot.end.split(':')[0]);
+            return slotHour >= freeStartHour && slotHour < freeEndHour;
+        });
+    };
+
+    // Update start/end hours when slider values change
+    useEffect(() => {
+        setStartHour(sliderStartValue);
+        setEndHour(sliderEndValue);
+    }, [sliderStartValue, sliderEndValue]);
+
     return (
         <div className="min-h-screen bg-gradient-to-b from-[#0A0B1A] to-[#141529] flex flex-col">
             <Header />
 
-            <main className="flex-1 container mx-auto px-4 pt-30 pb-6">
-                <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-[#8B7FFF]/20 p-6">
-                    <h1 className="text-2xl font-bold text-white mb-6">Study Planner</h1>
+            <main className="flex-1 container mx-auto px-4 pt-24 pb-6">
+                <div className="max-w-4xl mx-auto">
+                    <h1 className="text-3xl font-bold text-white mb-8">Study Time Planner</h1>
                     
-                    {/* Day Selection */}
-                    <div className="mb-8">
-                        <h2 className="text-lg font-medium text-white mb-4">Select a Day</h2>
-                        <div className="grid grid-cols-7 gap-2">
+                    {/* Date Selection */}
+                    <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-[#8B7FFF]/20 p-6 mb-6">
+                        <h2 className="text-xl font-medium text-white mb-4">Select a Date</h2>
+                        <div className="grid grid-cols-7 gap-3">
                             {nextDays.map((day, index) => (
                                 <button
                                     key={index}
-                                    className={`p-3 rounded-lg text-center ${
+                                    className={`p-4 rounded-xl text-center transition-all ${
                                         selectedDate && 
                                         day.getDate() === selectedDate.getDate() && 
                                         day.getMonth() === selectedDate.getMonth() && 
                                         day.getFullYear() === selectedDate.getFullYear()
-                                            ? 'bg-[#86efac]/20 text-[#86efac] border border-[#86efac]'
+                                            ? 'bg-[#86efac]/20 text-[#86efac] border-2 border-[#86efac]'
                                             : 'bg-black/20 text-white border border-[#8B7FFF]/20 hover:border-[#8B7FFF]/40'
                                     }`}
                                     onClick={() => handleDaySelect(day)}
                                 >
-                                    <div className="text-sm font-medium">
+                                    <div className="text-sm font-medium mb-1">
                                         {day.toLocaleDateString('default', { weekday: 'short' })}
                                     </div>
-                                    <div className="text-lg">
+                                    <div className="text-2xl font-bold">
                                         {day.getDate()}
                                     </div>
                                 </button>
                             ))}
                         </div>
                     </div>
-                    
-                    {/* Time Range Selection */}
+
                     {selectedDate && (
-                        <div className="mb-8">
-                            <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-lg font-medium text-white">Select Time Range</h2>
-                                <div className="text-white">
-                                    {startHour !== null && endHour !== null ? (
-                                        `${startHour.toString().padStart(2, '0')}:00 - ${endHour.toString().padStart(2, '0')}:00`
-                                    ) : (
-                                        'No time range selected'
-                                    )}
-                                </div>
-                            </div>
-                            
-                            <div className="bg-black/20 rounded-lg p-4 mb-4">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center space-x-2">
-                                        <div className={`w-3 h-3 rounded-full ${isSelectingStart ? 'bg-[#86efac]' : 'bg-[#8B7FFF]'}`}></div>
-                                        <span className="text-white">
-                                            {isSelectingStart ? 'Select Start Time' : 'Select End Time'}
-                                        </span>
+                        <>
+                            {/* Time Range Selection */}
+                            <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-[#8B7FFF]/20 p-6 mb-6">
+                                <h2 className="text-xl font-medium text-white mb-4">Set Available Hours</h2>
+                                
+                                <div className="flex flex-col items-center">
+                                    <div className="w-full max-w-md mb-6">
+                                        <div className="grid grid-cols-2 gap-6">
+                                            {/* Start Time */}
+                                            <div>
+                                                <label className="block text-white mb-2">Start Time</label>
+                                                <div className="relative group">
+                                                    <select
+                                                        className="w-full p-3 rounded-lg bg-[#141529]/80 text-white border border-[#8B7FFF]/30 appearance-none transition-all group-hover:border-[#8B7FFF]/60 focus:border-[#86efac]/70 focus:ring-1 focus:ring-[#86efac]/50 outline-none backdrop-blur-sm"
+                                                        value={sliderStartValue}
+                                                        onChange={(e) => {
+                                                            const newValue = parseInt(e.target.value);
+                                                            if (newValue < sliderEndValue) {
+                                                                setSliderStartValue(newValue);
+                                                            }
+                                                        }}
+                                                    >
+                                                        {Array.from({ length: 24 }, (_, i) => (
+                                                            <option 
+                                                                key={i} 
+                                                                value={i}
+                                                                disabled={i >= sliderEndValue}
+                                                                className="bg-[#141529] text-white"
+                                                            >
+                                                                {i.toString().padStart(2, '0')}:00
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-[#8B7FFF] group-hover:text-[#86efac] transition-colors">
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                        </svg>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* End Time */}
+                                            <div>
+                                                <label className="block text-white mb-2">End Time</label>
+                                                <div className="relative group">
+                                                    <select
+                                                        className="w-full p-3 rounded-lg bg-[#141529]/80 text-white border border-[#8B7FFF]/30 appearance-none transition-all group-hover:border-[#8B7FFF]/60 focus:border-[#86efac]/70 focus:ring-1 focus:ring-[#86efac]/50 outline-none backdrop-blur-sm"
+                                                        value={sliderEndValue}
+                                                        onChange={(e) => {
+                                                            const newValue = parseInt(e.target.value);
+                                                            if (newValue > sliderStartValue) {
+                                                                setSliderEndValue(newValue);
+                                                            }
+                                                        }}
+                                                    >
+                                                        {Array.from({ length: 24 }, (_, i) => (
+                                                            <option 
+                                                                key={i} 
+                                                                value={i}
+                                                                disabled={i <= sliderStartValue}
+                                                                className="bg-[#141529] text-white"
+                                                            >
+                                                                {i.toString().padStart(2, '0')}:00
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none text-[#8B7FFF] group-hover:text-[#86efac] transition-colors">
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                        </svg>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="mt-6 p-4 rounded-lg bg-[#86efac]/10 border border-[#86efac]/20">
+                                            <div className="flex items-center justify-between">
+                                                <div className="text-[#86efac] text-lg font-medium">
+                                                    {sliderStartValue.toString().padStart(2, '0')}:00 - {sliderEndValue.toString().padStart(2, '0')}:00
+                                                </div>
+                                                <div className="text-[#86efac]/70 text-sm">
+                                                    {sliderEndValue - sliderStartValue} hours
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex justify-end space-x-4 w-full max-w-md mt-6">
+                                        <button
+                                            className="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500/30 transition-colors"
+                                            onClick={() => {
+                                                setSliderStartValue(9);
+                                                setSliderEndValue(20);
+                                            }}
+                                        >
+                                            Reset
+                                        </button>
+                                        <button
+                                            onClick={checkFreeTime}
+                                            disabled={isCheckingFreeTime}
+                                            className={`px-6 py-2 rounded-lg flex items-center space-x-2 transition-colors ${
+                                                isCheckingFreeTime
+                                                    ? 'bg-[#8B7FFF]/20 text-white/50 cursor-not-allowed'
+                                                    : 'bg-[#86efac]/20 text-[#86efac] border border-[#86efac] hover:bg-[#86efac]/30'
+                                            }`}
+                                        >
+                                            {isCheckingFreeTime ? (
+                                                <>
+                                                    <div className="w-5 h-5 border-2 border-t-transparent border-[#86efac] rounded-full animate-spin"></div>
+                                                    <span>Checking...</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                                    </svg>
+                                                    <span>Find Free Time</span>
+                                                </>
+                                            )}
+                                        </button>
                                     </div>
                                 </div>
-                                
-                                <div className="grid grid-cols-6 gap-2">
-                                    {Array.from({ length: 24 }, (_, i) => {
-                                        const hour = i;
-                                        const isSelected = isSelectingStart 
-                                            ? hour === startHour 
-                                            : hour === endHour;
-                                        const isInRange = startHour !== null && endHour !== null && hour >= startHour && hour <= endHour;
-                                        const isDisabled = startHour !== null && endHour !== null && (
-                                            isSelectingStart 
-                                                ? hour > (endHour ?? 23)
-                                                : hour < (startHour ?? 0)
-                                        );
-                                        
-                                        return (
-                                            <button
-                                                key={hour}
-                                                className={`p-2 rounded-lg text-center ${
-                                                    isSelected
-                                                        ? 'bg-[#86efac]/20 text-[#86efac] border border-[#86efac]'
-                                                        : isInRange
-                                                            ? 'bg-[#8B7FFF]/20 text-white border border-[#8B7FFF]/40'
-                                                            : 'bg-black/20 text-white/70 border border-[#8B7FFF]/20'
-                                                } ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                onClick={() => {
-                                                    if (isDisabled) return;
-                                                    
-                                                    if (isSelectingStart) {
-                                                        setStartHour(hour);
-                                                        setIsSelectingStart(false);
-                                                    } else {
-                                                        setEndHour(hour);
-                                                        setIsSelectingStart(true);
-                                                    }
-                                                }}
-                                                disabled={isDisabled}
-                                            >
-                                                {hour.toString().padStart(2, '0')}:00
-                                            </button>
-                                        );
-                                    })}
-                                </div>
                             </div>
-                            
-                            <div className="flex justify-end space-x-3">
-                                <button
-                                    className="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 border border-red-500/40 hover:bg-red-500/30"
-                                    onClick={() => {
-                                        setStartHour(null);
-                                        setEndHour(null);
-                                        setIsSelectingStart(true);
-                                    }}
-                                >
-                                    Clear Selection
-                                </button>
-                                <button
-                                    className="px-4 py-2 rounded-lg bg-[#8B7FFF]/20 text-white border border-[#8B7FFF]/40 hover:bg-[#8B7FFF]/30"
-                                    onClick={() => setIsSelectingStart(!isSelectingStart)}
-                                >
-                                    {isSelectingStart ? 'Switch to End Time' : 'Switch to Start Time'}
-                                </button>
-                            </div>
-                        </div>
-                    )}
-                    
-                    {/* Time Slots Visualization */}
-                    {selectedDate && startHour !== null && endHour !== null && (
-                        <div className="mb-8">
-                            <h2 className="text-lg font-medium text-white mb-4">
-                                {formatDate(selectedDate)} - Schedule
-                            </h2>
-                            <div className="bg-black/20 rounded-lg p-4">
-                                <div className="grid grid-cols-1 gap-2">
-                                    {filteredTimeSlots.map((timeSlot) => {
-                                        const event = getEventForTimeSlot(timeSlot);
-                                        
-                                        return (
-                                            <div 
-                                                key={timeSlot}
-                                                className={`p-2 rounded-lg ${
-                                                    event
-                                                        ? 'bg-gray-800/50 border border-gray-700 text-gray-400'
-                                                        : 'bg-[#8B7FFF]/10 border border-[#8B7FFF]/20'
-                                                }`}
-                                            >
-                                                <div className="flex justify-between items-center">
-                                                    <div className="text-white">{timeSlot}</div>
-                                                    {!hasEvent(timeSlot) && (
-                                                        <button
-                                                            className="text-xs px-2 py-1 rounded bg-[#86efac]/20 text-[#86efac] border border-[#86efac] hover:bg-[#86efac]/30"
-                                                            onClick={() => handleAddEvent(timeSlot)}
-                                                        >
-                                                            Add Event
-                                                        </button>
-                                                    )}
-                                                    {hasEvent(timeSlot) && (
-                                                        <div className="text-xs text-gray-400">
-                                                            {getEventForTimeSlot(timeSlot)?.startTime} - {getEventForTimeSlot(timeSlot)?.endTime}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                                {hasEvent(timeSlot) && (
-                                                    <div className="mt-1 text-sm text-gray-400">
-                                                        {getEventForTimeSlot(timeSlot)?.title}
-                                                    </div>
-                                                )}
+
+                            {/* Free Time Slots */}
+                            {(freeSlots.length > 0 || freeTimeError) && (
+                                <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-[#8B7FFF]/20 p-6">
+                                    <h2 className="text-xl font-medium text-white mb-4">Available Time Slots</h2>
+
+                                    {freeTimeError ? (
+                                        <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
+                                            <div className="flex items-center space-x-2">
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                                <span>{freeTimeError}</span>
                                             </div>
-                                        );
-                                    })}
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {freeSlots.map((slot, index) => (
+                                                <div
+                                                    key={index}
+                                                    className="p-4 rounded-lg bg-[#86efac]/10 border border-[#86efac]/20 flex items-center justify-between"
+                                                >
+                                                    <div className="flex items-center space-x-4">
+                                                        <div className="w-2 h-8 bg-[#86efac] rounded-full"></div>
+                                                        <div>
+                                                            <div className="text-[#86efac] text-lg font-medium">
+                                                                {slot.start} - {slot.end}
+                                                            </div>
+                                                            <div className="text-[#86efac]/70 text-sm">
+                                                                {formatDate(selectedDate)}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        className="px-4 py-2 rounded-lg bg-[#86efac]/20 text-[#86efac] border border-[#86efac] hover:bg-[#86efac]/30"
+                                                        onClick={() => {
+                                                            setEventStartTime(slot.start);
+                                                            setEventEndTime(slot.end);
+                                                            setIsModalOpen(true);
+                                                        }}
+                                                    >
+                                                        Schedule
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
-                        </div>
+                            )}
+                        </>
                     )}
                 </div>
             </main>
 
             {/* Add Event Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-                    <div className="bg-[#141529] rounded-xl p-6 w-full max-w-sm">
-                        <h2 className="text-xl font-bold text-white mb-4">Add Revision Session</h2>
-                        
-                        <div className="mb-4">
-                            <p className="text-[#B39DDB]/70 mb-2">
-                                Date: {selectedDate ? formatDate(selectedDate) : ''}
-                            </p>
-                        </div>
-                        
-                        <div className="mb-4">
-                            <label className="block text-white mb-1">Start Time</label>
-                            <div className="grid grid-cols-4 gap-2">
-                                {filteredTimeSlots.map((time) => {
-                                    const isSelected = time === eventStartTime;
-                                    return (
-                                        <button
-                                            key={time}
-                                            className={`p-2 rounded-lg text-center ${
-                                                isSelected
-                                                    ? 'bg-[#86efac]/20 text-[#86efac] border border-[#86efac]'
-                                                    : 'bg-black/20 text-white border border-[#8B7FFF]/20 hover:border-[#8B7FFF]/40'
-                                            }`}
-                                            onClick={() => setEventStartTime(time)}
-                                        >
-                                            {time}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
+                <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+                    <div className="bg-[#141529] rounded-xl p-6 w-full max-w-md mx-4">
+                        <h2 className="text-2xl font-bold text-white mb-6">Schedule Study Session</h2>
                         
                         <div className="mb-6">
-                            <label className="block text-white mb-1">End Time</label>
-                            <div className="grid grid-cols-4 gap-2">
-                                {filteredTimeSlots.map((time) => {
-                                    const isSelected = time === eventEndTime;
-                                    const isDisabled = parseInt(time.split(':')[0]) <= parseInt(eventStartTime.split(':')[0]);
-                                    
-                                    return (
-                                        <button
-                                            key={time}
-                                            className={`p-2 rounded-lg text-center ${
-                                                isSelected
-                                                    ? 'bg-[#86efac]/20 text-[#86efac] border border-[#86efac]'
-                                                    : isDisabled
-                                                        ? 'bg-black/20 text-white/50 border border-[#8B7FFF]/10 cursor-not-allowed'
-                                                        : 'bg-black/20 text-white border border-[#8B7FFF]/20 hover:border-[#8B7FFF]/40'
-                                            }`}
-                                            onClick={() => !isDisabled && setEventEndTime(time)}
-                                            disabled={isDisabled}
-                                        >
-                                            {time}
-                                        </button>
-                                    );
-                                })}
+                            <div className="p-4 rounded-lg bg-[#86efac]/10 border border-[#86efac]/20">
+                                <div className="text-[#86efac] text-lg font-medium mb-1">
+                                    {eventStartTime} - {eventEndTime}
+                                </div>
+                                <div className="text-[#86efac]/70">
+                                    {selectedDate ? formatDate(selectedDate) : ''}
+                                </div>
                             </div>
                         </div>
                         
-                        <div className="flex justify-end space-x-3">
+                        <div className="flex justify-end space-x-4">
                             <button 
-                                className="px-4 py-2 rounded-lg bg-black/20 text-white"
+                                className="px-6 py-3 rounded-lg bg-black/20 text-white hover:bg-black/30"
                                 onClick={() => setIsModalOpen(false)}
                             >
                                 Cancel
                             </button>
                             <button 
-                                className="px-4 py-2 rounded-lg bg-[#86efac]/20 text-[#86efac]"
+                                className="px-6 py-3 rounded-lg bg-[#86efac]/20 text-[#86efac] border border-[#86efac] hover:bg-[#86efac]/30"
                                 onClick={handleCreateEvent}
                             >
-                                Add
+                                Confirm
                             </button>
                         </div>
                     </div>

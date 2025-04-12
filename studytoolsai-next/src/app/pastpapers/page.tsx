@@ -63,17 +63,53 @@ export default function PastPapers() {
         fileInputRef.current?.click();
     };
 
-    const handleGenerate = () => {
+    const handleGenerate = async () => {
         if (!selectedFile) {
             setErrorMessage('Please upload a PDF file first');
             return;
         }
-        setIsGenerating(true);
-        // Simulate generation process
-        setTimeout(() => {
-            setIsGenerating(false);
+
+        try {
+            setIsGenerating(true);
+            setErrorMessage('');
+
+            const formData = new FormData();
+            formData.append('pdf', selectedFile);
+            formData.append('difficulty', difficulty.toString());
+
+            const response = await fetch('http://localhost:8000/generate-paper', {
+                method: 'POST',
+                body: formData,
+                // Don't set Content-Type header, let the browser set it with the boundary
+                headers: {
+                    // Add any additional headers if needed
+                },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => null);
+                throw new Error(errorData?.detail || 'Failed to generate paper');
+            }
+
+            const pdfBlob = await response.blob();
+            
+            // Create and trigger download
+            const url = window.URL.createObjectURL(pdfBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `generated_paper_${getDifficultyLabel(difficulty).toLowerCase()}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+
             setIsGenerated(true);
-        }, 5000);
+        } catch (error) {
+            console.error('Error generating paper:', error);
+            setErrorMessage(error instanceof Error ? error.message : 'Failed to generate paper. Please try again.');
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     const handleDelete = () => {
@@ -127,10 +163,13 @@ export default function PastPapers() {
                                             d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
                                         />
                                     </svg>
-                                    <span className="text-xl text-white">Generated_Paper.pdf</span>
+                                    <span className="text-xl text-white">
+                                        {selectedFile ? selectedFile.name : 'Generated_Paper.pdf'}
+                                    </span>
                                 </div>
                                 <div className="flex items-center space-x-4">
                                     <button 
+                                        onClick={handleGenerate}
                                         className="px-6 py-2 rounded-lg bg-gradient-to-r from-[#86efac] to-[#8B7FFF] text-white font-medium hover:opacity-90 transition-opacity"
                                     >
                                         Download
