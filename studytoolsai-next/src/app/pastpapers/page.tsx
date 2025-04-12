@@ -74,16 +74,18 @@ export default function PastPapers() {
             setErrorMessage('');
 
             const formData = new FormData();
-            formData.append('pdf', selectedFile);
-            formData.append('difficulty', difficulty.toString());
+            formData.append('pdf_file', selectedFile);
+            // Map difficulty to backend enum values
+            const difficultyMap = {
+                1: 'easier',
+                2: 'same',
+                3: 'harder'
+            };
+            formData.append('difficulty', difficultyMap[difficulty as keyof typeof difficultyMap]);
 
-            const response = await fetch('http://localhost:8000/generate-paper', {
+            const response = await fetch('http://localhost:8000/papers/generate', {
                 method: 'POST',
                 body: formData,
-                // Don't set Content-Type header, let the browser set it with the boundary
-                headers: {
-                    // Add any additional headers if needed
-                },
             });
 
             if (!response.ok) {
@@ -112,7 +114,7 @@ export default function PastPapers() {
         }
     };
 
-    const handleDelete = () => {
+    const handleDone = () => {
         setSelectedFile(null);
         setIsGenerated(false);
         setErrorMessage('');
@@ -138,7 +140,7 @@ export default function PastPapers() {
                         </p>
                     </div>
 
-                    {/* File Drop Zone or Download Area */}
+                    {/* File Drop Zone or Success Message */}
                     {isGenerating ? (
                         <div className="mt-6 p-6 rounded-2xl bg-black/20 flex flex-col items-center justify-center">
                             <div className="w-14 h-14 border-4 border-[#8B7FFF] border-t-[#86efac] rounded-full animate-spin mb-4"></div>
@@ -147,41 +149,14 @@ export default function PastPapers() {
                             </p>
                         </div>
                     ) : isGenerated ? (
-                        <div className="mt-6 p-5 rounded-2xl bg-black/20 border border-[#8B7FFF]/20">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-4">
-                                    <svg 
-                                        className="w-8 h-8 text-[#86efac]" 
-                                        fill="none" 
-                                        stroke="currentColor" 
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path 
-                                            strokeLinecap="round" 
-                                            strokeLinejoin="round" 
-                                            strokeWidth={2} 
-                                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
-                                        />
-                                    </svg>
-                                    <span className="text-xl text-white">
-                                        {selectedFile ? selectedFile.name : 'Generated_Paper.pdf'}
-                                    </span>
-                                </div>
-                                <div className="flex items-center space-x-4">
-                                    <button 
-                                        onClick={handleGenerate}
-                                        className="px-6 py-2 rounded-lg bg-gradient-to-r from-[#86efac] to-[#8B7FFF] text-white font-medium hover:opacity-90 transition-opacity"
-                                    >
-                                        Download
-                                    </button>
-                                    <button 
-                                        onClick={handleDelete}
-                                        className="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 font-medium hover:bg-red-500/30 transition-all"
-                                    >
-                                        Delete
-                                    </button>
-                                </div>
-                            </div>
+                        <div className="mt-6 p-6 rounded-2xl bg-black/20 text-center">
+                            <p className="text-white mb-4">Check your downloads folder!</p>
+                            <button 
+                                onClick={handleDone}
+                                className="px-6 py-2 rounded-lg bg-[#8B7FFF] text-white"
+                            >
+                                Done
+                            </button>
                         </div>
                     ) : (
                         <div

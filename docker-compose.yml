@@ -13,6 +13,7 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - PORTIA_API_KEY=${PORTIA_API_KEY}
+      - PYTHONPATH=/app
     
   studytoolsai-next:
     build: ./studytoolsai-next

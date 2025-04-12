@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
-from ..google_calendar import find_free_time_in_calendar, create_event_in_calendar
+from google_calendar import find_free_time_in_calendar, create_event_in_calendar
 
 router = APIRouter(prefix="/calendar", tags=["calendar"])
 
