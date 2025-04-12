@@ -1,10 +1,11 @@
-from fastapi import FastAPI, File, UploadFile, Form
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Body
 from enum import Enum
 from typing import List, Optional
 from fastapi.middleware.cors import CORSMiddleware
-from google_calendar import find_free_time_in_calendar
+from google_calendar import create_event_in_calendar, find_free_time_in_calendar
 from pydantic import BaseModel
 from routers import paper_router
+import json
 
 class DifficultyLevel(str, Enum):
     SAME = "same"
@@ -30,26 +31,39 @@ def read_root():
     return {"message": "Welcome to StudentTools API"}
 
 # Calendar Integration Endpoints
+class FreeTimeRequest(BaseModel):
+	date: str
+	start_time: str
+	end_time: str
+	constraints: Optional[List[str]] = []
 
-# Input model for the calendar request
-class CalendarRequest(BaseModel):
-    date: str
-    start_time: str
-    end_time: str
-    constraints: Optional[List[str]] = []
+class CreateEventRequest(BaseModel):
+	start: str
+	end: str
+	summary: Optional[str] = "Revision Event"
+	description: Optional[str] = ""
 
-@app.post("/calendar")
-async def get_calendar_free_time(req: CalendarRequest):
-    try:
-        free_times = find_free_time_in_calendar(
-            date=req.date,
-            start_time=req.start_time,
-            end_time=req.end_time,
-            constraints=req.constraints or []
-        )
-        return {"free_time_slots": free_times}
-    except Exception as e:
-        return {"error": str(e)}
+@app.post("/calendar/free")
+async def calendar_free(request: FreeTimeRequest):
+	"""Endpoint to find free time slots in Google Calendar."""
+	response_json = find_free_time_in_calendar(
+		date=request.date,
+		start_time=request.start_time,
+		end_time=request.end_time,
+		constraints=request.constraints
+	)
+	return response_json
+
+@app.post("/calendar/create-event")
+async def calendar_create_event(request: CreateEventRequest):
+	"""Endpoint to create a Google Calendar event."""
+	response = create_event_in_calendar(
+		start=request.start,
+		end=request.end,
+		summary=request.summary,
+		description=request.description
+	)
+	return response
 
 # Flashcard Endpoints
 @app.get("/flashcards")
@@ -64,7 +78,7 @@ async def create_flashcard():
 @app.post("/papers/generate")
 async def generate_paper(
     pdf_file: UploadFile = File(...),
-    difficulty: DifficultyLevel = DifficultyLevel.SAME
+    difficulty: DifficultyLevel = Form(DifficultyLevel.SAME)
 ):
     # This will handle:
     # 1. Receiving the PDF
