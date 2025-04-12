@@ -194,16 +194,20 @@ export default function Flashcards() {
                                                 cardStates[card.id]?.isFlipped ? 'rotate-y-180' : ''
                                             }`}
                                         >
-                                            {/* Front of card */}
-                                            <div className="absolute w-full h-full backface-hidden bg-black/20 p-6 rounded-xl border border-[#8B7FFF]/40 hover:border-[#86efac] transition-colors">
-                                                <h3 className="text-xl font-semibold text-white mb-2">Question</h3>
-                                                <p className="text-[#B39DDB]/70">{card.question}</p>
+                                            {/* Front of card (Question) */}
+                                            <div className="absolute inset-0 w-full h-full backface-hidden">
+                                                <div className="w-full h-full bg-black/20 p-6 rounded-xl border border-[#8B7FFF]/40 hover:border-[#86efac] transition-colors">
+                                                    <h3 className="text-xl font-semibold text-white mb-2">Question</h3>
+                                                    <p className="text-[#B39DDB]/70">{card.question}</p>
+                                                </div>
                                             </div>
                                             
-                                            {/* Back of card */}
-                                            <div className="absolute w-full h-full backface-hidden bg-black/20 p-6 rounded-xl border border-[#8B7FFF]/40 hover:border-[#86efac] transition-colors rotate-y-180">
-                                                <h3 className="text-xl font-semibold text-white mb-2">Answer</h3>
-                                                <p className="text-[#B39DDB]/70">{card.answer}</p>
+                                            {/* Back of card (Answer) */}
+                                            <div className="absolute inset-0 w-full h-full backface-hidden rotate-y-180">
+                                                <div className="w-full h-full bg-black/20 p-6 rounded-xl border border-[#8B7FFF]/40 hover:border-[#86efac] transition-colors">
+                                                    <h3 className="text-xl font-semibold text-white mb-2">Answer</h3>
+                                                    <p className="text-[#B39DDB]/70">{card.answer}</p>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

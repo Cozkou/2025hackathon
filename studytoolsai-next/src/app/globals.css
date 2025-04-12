@@ -32,12 +32,19 @@ body {
 
 .transform-style-preserve-3d {
     transform-style: preserve-3d;
+    transition: transform 0.6s;
 }
 
 .backface-hidden {
     backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
 }
 
 .rotate-y-180 {
     transform: rotateY(180deg);
+}
+
+/* Add smooth transition for hover effects */
+.transition-colors {
+    transition: all 0.3s ease;
 }
