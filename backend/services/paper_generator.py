@@ -3,6 +3,7 @@ from fastapi import UploadFile, HTTPException
 import os
 from PyPDF2 import PdfReader # type: ignore
 from services.portia_config import get_portia_instance
+from anthropic import Anthropic
 
 class PaperGeneratorService:
     def __init__(self):
@@ -12,7 +13,9 @@ class PaperGeneratorService:
         # Ensure both directories exist
         os.makedirs(self.output_dir, exist_ok=True)
         os.makedirs(self.upload_dir, exist_ok=True)
-        # Initialize Portia
+        # Initialize Anthropic client
+        self.anthropic = Anthropic()
+        # Keep Portia instance for compatibility
         self.portia = get_portia_instance()
         
     async def extract_text_from_pdf(self, pdf_content: bytes) -> str:
@@ -36,121 +39,46 @@ class PaperGeneratorService:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error reading PDF: {str(e)}")
 
-    
-    
-    async def generate_new_paper_content(self, text: str, difficulty: str) -> Dict[str, Any]:
-        """Generate new paper content using Portia"""
+    async def generate_new_paper_content(self, text: str, difficulty: str) -> str:
+        """Generate new paper content using Claude directly"""
         try:
-            # Create a simple plan for paper generation
-            plan = str([
-                {
-                    "tool": "topic_analyzer",
-                    "input": {
-                        "content": text,
-                        "target_difficulty": 1 if difficulty == "easier" else 2 if difficulty == "same" else 3
-                    },
-                    "description": """
-                    Analyze this exam paper content to:
-                    1. Identify the main academic subject and specific topics covered
-                    2. Determine the academic level (high school, undergraduate, etc)
-                    3. Identify key concepts, theories, or methodologies being tested
-                    4. Analyze the current difficulty level and complexity of questions
-                    5. Look for any subject-specific terminology or frameworks used
-                    6. Note any contextual clues about the intended learning outcomes
-                    """
-                },
-                {
-                    "tool": "format_analyzer", 
-                    "input": {
-                        "content": text
-                    },
-                    "description": """
-                    Analyze the exam paper format to identify:
-                    1. Question types used (multiple choice, short answer, essay, etc)
-                    2. Section structure and organization
-                    3. Point distribution and weighting
-                    4. Time allocation per section
-                    5. Any special instructions or rubrics
-                    6. Format patterns and consistency
-                    
-                    Provide detailed format analysis to maintain consistent structure
-                    while generating new questions.
-                    """
-                },
-                {
-                    "tool": "question_generator",
-                    "input": {
-                        "topics": "$topic_analyzer.topics",
-                        "format": "$format_analyzer.format_rules",
-                        "difficulty": 1 if difficulty == "easier" else 2 if difficulty == "same" else 3
-                    },
-                    "description": """
-                    Generate new exam questions that:
-                    1. Match the identified question types and format
-                    2. Cover the same topics but with new scenarios/examples
-                    3. Maintain consistent style and terminology
-                    4. Adjust difficulty while preserving learning objectives
-                    5. Include clear marking schemes and solutions
-                    6. For any content that doesn't clearly fit the standard format:
-                       - Place miscellaneous instructions in instructions.general
-                       - Add non-standard question elements as additional fields in question.content
-                       - Include supplementary materials as attachments in metadata
-                       - Put alternative scoring approaches in solution.marking_scheme
-                       - Add section-specific notes to instructions.specific
-                    
-                    Return questions in the following standardized format:
+            print("Calling Claude API...")
+            
+            # Call Claude API directly - note: messages.create() is not async
+            message = self.anthropic.messages.create(
+                model="claude-3-opus-20240229",
+                max_tokens=4096,
+                temperature=0.7,
+                system="You are an expert exam paper generator. Generate a new version of the provided exam paper.",
+                messages=[
                     {
-                        "metadata": {
-                            "title": "Exam Title",
-                            "subject": "Subject Name",
-                            "level": "Academic Level",
-                            "total_time": "Duration in minutes",
-                            "total_marks": "Total marks"
-                        },
-                        "instructions": {
-                            "general": ["List of general instructions"],
-                            "specific": {"section_name": ["Section-specific instructions"]}
-                        },
-                        "sections": [
-                            {
-                                "name": "Section Name",
-                                "type": "question_type",
-                                "marks": "section_marks",
-                                "time_allocation": "minutes",
-                                "questions": [
-                                    {
-                                        "number": "question_number",
-                                        "type": "question_type",
-                                        "marks": "marks_for_question",
-                                        "content": {
-                                            "question_text": "The question",
-                                            "sub_parts": [
-                                                {
-                                                    "label": "a",
-                                                    "text": "sub_question_text",
-                                                    "marks": "sub_part_marks"
-                                                }
-                                            ]
-                                        },
-                                        "solution": {
-                                            "answer": "correct_answer",
-                                            "marking_scheme": ["marking criteria"]
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
+                        "role": "user",
+                        "content": f"Create a new version of this exam paper that is {difficulty} in difficulty. Here is the content:\n\n{text}"
                     }
-                    """
-                }
-            ])
+                ]
+            )
+
+            print("Claude API Response:")
+            print(message)  # Debug print to see full response
             
-            # Run the plan
-            result = self.portia.run(plan)
-            
-            return result
+            # Access the content correctly from the message
+            if hasattr(message, 'content'):
+                print("Message has content attribute")
+                if isinstance(message.content, list) and len(message.content) > 0:
+                    print("Content is a list with items")
+                    return message.content[0].text
+                else:
+                    print(f"Unexpected content format: {message.content}")
+                    return str(message.content)
+            else:
+                print("Message structure:", dir(message))
+                raise HTTPException(
+                    status_code=500,
+                    detail="Unexpected response format from Claude"
+                )
             
         except Exception as e:
+            print(f"Error in Claude API call: {str(e)}")
             raise HTTPException(status_code=500, detail=f"Error generating paper content: {str(e)}")
 
     async def make_pdf(self, content: Dict[str, Any], output_path: str):
@@ -168,36 +96,34 @@ class PaperGeneratorService:
         path = os.path.join(self.output_dir, f"{paper_id}.pdf")
         return path if os.path.exists(path) else None
 
-    async def generate(self, pdf_file: UploadFile, difficulty: str, paper_id: str) -> str:
+    async def generate(self, pdf_file: UploadFile, difficulty: str, paper_id: str) -> Dict[str, Any]:
         """
         Main function that:
         1. Gets PDF content
-        2. Sends to ChatGPT
+        2. Sends to Claude
         3. Makes new PDF
         """
         try:
             # Read the uploaded PDF
             pdf_content = await pdf_file.read()
             
-            # For testing: Extract and return the text
+            # Extract text from PDF
             extracted_text = await self.extract_text_from_pdf(pdf_content)
             print("Extracted text from PDF:")
             print("-" * 50)
             print(extracted_text)
             print("-" * 50)
 
-
-            # Generate new paper content using the extracted text and difficulty
-            paper_content = await self.generate_new_paper_content(extracted_text, difficulty)
+            # Generate new paper content using Claude
+            generated_content = await self.generate_new_paper_content(extracted_text, difficulty)
             
-            print(paper_content)
+            print("Generated paper content:")
+            print(generated_content)
             
-            
-            # Return temporary success message with first 100 chars of text
+            # Return success response with generated content
             return {
                 "status": "success",
-                "text_preview": extracted_text[:100] + "...",
-                "text_length": len(extracted_text)
+                "generated_content": generated_content
             }
             
         except Exception as e:
