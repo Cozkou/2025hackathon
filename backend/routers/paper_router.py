@@ -16,7 +16,7 @@ class DifficultyLevel(str, Enum):
 @router.post("/generate")
 async def generate_paper(
     pdf_file: UploadFile = File(...),
-    difficulty: DifficultyLevel = DifficultyLevel.SAME
+    difficulty: DifficultyLevel = "same"
 ):
     try:
         paper_id = str(uuid.uuid4())
