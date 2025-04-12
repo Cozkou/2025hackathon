@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import Image from 'next/image';
 
 export default function PastPapers() {
     const [isDragging, setIsDragging] = useState(false);
@@ -222,15 +223,37 @@ export default function PastPapers() {
                     {/* Difficulty Selection */}
                     {!isGenerated && !isGenerating && (
                         <div className="mt-5 p-5 rounded-2xl bg-black/20 border border-[#8B7FFF]/20">
-                            <div className="flex items-center justify-between mb-4">
-                                <label className="text-lg text-white font-medium">Difficulty Level</label>
-                                <span className={`text-lg font-bold ${
-                                    difficulty === 1 ? 'text-[#86efac]' : 
-                                    difficulty === 2 ? 'text-yellow-400' :
-                                    'text-red-500'
-                                }`}>
-                                    {getDifficultyLabel(difficulty)}
-                                </span>
+                            <div className="flex items-center justify-center mb-4">
+                                <div className="flex items-center gap-2">
+                                    <label className="text-xl font-bold text-white bg-gradient-to-r from-[#86efac] to-[#8B7FFF] text-transparent bg-clip-text font-['Poppins'] tracking-wide">Difficulty Level</label>
+                                    {difficulty === 1 && (
+                                        <Image
+                                            src="/easiericon.png"
+                                            alt="Easy Difficulty"
+                                            width={28}
+                                            height={28}
+                                            className="object-contain"
+                                        />
+                                    )}
+                                    {difficulty === 2 && (
+                                        <Image
+                                            src="/defaulticon.png"
+                                            alt="Default Difficulty"
+                                            width={28}
+                                            height={28}
+                                            className="object-contain"
+                                        />
+                                    )}
+                                    {difficulty === 3 && (
+                                        <Image
+                                            src="/hardicon.png"
+                                            alt="Hard Difficulty"
+                                            width={28}
+                                            height={28}
+                                            className="object-contain"
+                                        />
+                                    )}
+                                </div>
                             </div>
                             <div className="grid grid-cols-3 gap-4">
                                 {[1, 2, 3].map((value) => (
