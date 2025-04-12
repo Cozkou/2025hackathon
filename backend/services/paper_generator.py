@@ -4,17 +4,26 @@ import os
 from PyPDF2 import PdfReader # type: ignore
 from services.portia_config import get_portia_instance
 from anthropic import Anthropic
+from dotenv import load_dotenv
 
 class PaperGeneratorService:
     def __init__(self):
+        # Load environment variables
+        load_dotenv()
+        
         # We'll store generated PDFs here
         self.output_dir = "generated_papers"
         self.upload_dir = "uploads"
         # Ensure both directories exist
         os.makedirs(self.output_dir, exist_ok=True)
         os.makedirs(self.upload_dir, exist_ok=True)
-        # Initialize Anthropic client
-        self.anthropic = Anthropic()
+        
+        # Initialize Anthropic client with API key from environment
+        api_key = os.getenv('ANTHROPIC_API_KEY')
+        if not api_key:
+            raise ValueError("ANTHROPIC_API_KEY environment variable is not set")
+        self.anthropic = Anthropic(api_key=api_key)
+        
         # Keep Portia instance for compatibility
         self.portia = get_portia_instance()
         
@@ -43,42 +52,79 @@ class PaperGeneratorService:
         """Generate new paper content using Claude directly"""
         try:
             print("Calling Claude API...")
+            print(f"Input text length: {len(text)}")
+            print(f"Difficulty: {difficulty}")
             
-            # Call Claude API directly - note: messages.create() is not async
+            # Call Claude API directly
             message = self.anthropic.messages.create(
                 model="claude-3-opus-20240229",
                 max_tokens=4096,
                 temperature=0.7,
-                system="You are an expert exam paper generator. Generate a new version of the provided exam paper.",
+                system=f"""You are an expert exam paper generator. Using the provided exam paper as reference, create a new version that is {difficulty} in difficulty.
+
+1. Content Analysis & Adaptation:
+   - Identify and maintain the same subject area and topics
+   - Keep the same academic level but adjust difficulty as specified
+   - Preserve the core concepts and learning objectives
+   - Use similar terminology and technical language
+   - Maintain the same style of questions but with new scenarios
+
+2. Structure & Format:
+   - Follow the same overall structure as the input paper
+   - Keep similar time allocations per section
+   - Maintain comparable point distribution
+   - Use the same question types (multiple choice, essay, etc.)
+   - Preserve any special formatting or notation
+
+3. Difficulty Adjustment Guidelines:
+   If easier:
+   - Break down complex questions into smaller parts
+   - Provide more scaffolding in questions
+   - Use simpler language while maintaining technical accuracy
+   - Give more explicit hints or guidance
+   - Reduce the number of steps in multi-step problems
+
+   If harder:
+   - Combine concepts that were separate in the original
+   - Require more steps to reach solutions
+   - Include more application and analysis
+   - Reduce explicit guidance
+   - Add complexity to scenarios
+
+   If same difficulty:
+   - Match complexity level exactly
+   - Change scenarios but keep cognitive demand similar
+   - Maintain same level of guidance
+   - Keep similar number of steps in solutions
+
+4. Quality Standards:
+   - All questions must be clear and unambiguous
+   - Each question should have a detailed solution
+   - Include marking schemes for all questions
+   - Ensure all questions are solvable
+   - Maintain academic rigor
+   - Time allocations should be reasonable""",
                 messages=[
                     {
                         "role": "user",
-                        "content": f"Create a new version of this exam paper that is {difficulty} in difficulty. Here is the content:\n\n{text}"
+                        "content": f"Generate a new exam paper based on this content:\n\n{text}"
                     }
                 ]
             )
 
-            print("Claude API Response:")
-            print(message)  # Debug print to see full response
+            print("Claude API Response received")
+            print("Response type:", type(message))
+            print("Response attributes:", dir(message))
             
-            # Access the content correctly from the message
-            if hasattr(message, 'content'):
-                print("Message has content attribute")
-                if isinstance(message.content, list) and len(message.content) > 0:
-                    print("Content is a list with items")
-                    return message.content[0].text
-                else:
-                    print(f"Unexpected content format: {message.content}")
-                    return str(message.content)
-            else:
-                print("Message structure:", dir(message))
-                raise HTTPException(
-                    status_code=500,
-                    detail="Unexpected response format from Claude"
-                )
+            # Get the response content
+            response = message.content[0].text
+            print("Generated content length:", len(response))
+            
+            return response
             
         except Exception as e:
             print(f"Error in Claude API call: {str(e)}")
+            print(f"Error type: {type(e)}")
             raise HTTPException(status_code=500, detail=f"Error generating paper content: {str(e)}")
 
     async def make_pdf(self, content: Dict[str, Any], output_path: str):
