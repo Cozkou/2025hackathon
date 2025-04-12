@@ -10,7 +10,17 @@ export default function PastPapers() {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isGenerated, setIsGenerated] = useState(false);
+    const [difficulty, setDifficulty] = useState(2); // 1: Easier, 2: Same, 3: Harder
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const getDifficultyLabel = (value: number) => {
+        switch(value) {
+            case 1: return 'Easier';
+            case 2: return 'Default';
+            case 3: return 'Harder';
+            default: return 'Default';
+        }
+    };
 
     const validateFile = (file: File): boolean => {
         if (!file.type.includes('pdf')) {
@@ -75,17 +85,17 @@ export default function PastPapers() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-[#0A0B1A] to-[#141529] flex flex-col">
+        <div className="min-h-screen bg-gradient-to-b from-[#0A0B1A] to-[#141529] flex flex-col overflow-hidden">
             <Header />
             
-            <main className="flex-1 container mx-auto px-4 pt-32">
+            <main className="flex-1 container mx-auto px-4 pt-24">
                 <div className="max-w-4xl mx-auto">
                     {/* Title Section */}
-                    <div className="mb-8">
-                        <h1 className="text-6xl font-bold text-white mb-6 font-['Poppins']">
+                    <div className="mb-5 mt-10">
+                        <h1 className="text-4xl font-bold text-white mb-3 font-['Poppins']">
                             Past Paper Generator
                         </h1>
-                        <p className="text-xl text-[#B39DDB]/70 leading-relaxed">
+                        <p className="text-base text-[#B39DDB]/70 leading-relaxed">
                             Running out of past papers to revise with? Pass in your old papers below and generate 
                             all new exam papers to maximise your practice!
                         </p>
@@ -93,14 +103,14 @@ export default function PastPapers() {
 
                     {/* File Drop Zone or Download Area */}
                     {isGenerating ? (
-                        <div className="mt-12 p-12 rounded-2xl bg-black/20 flex flex-col items-center justify-center">
-                            <div className="w-16 h-16 border-4 border-[#8B7FFF] border-t-[#86efac] rounded-full animate-spin mb-6"></div>
-                            <p className="text-xl text-[#B39DDB]/70 text-center">
+                        <div className="mt-6 p-6 rounded-2xl bg-black/20 flex flex-col items-center justify-center">
+                            <div className="w-14 h-14 border-4 border-[#8B7FFF] border-t-[#86efac] rounded-full animate-spin mb-4"></div>
+                            <p className="text-lg text-[#B39DDB]/70 text-center">
                                 Generating your paper...
                             </p>
                         </div>
                     ) : isGenerated ? (
-                        <div className="mt-12 p-8 rounded-2xl bg-black/20 border border-[#8B7FFF]/20">
+                        <div className="mt-6 p-5 rounded-2xl bg-black/20 border border-[#8B7FFF]/20">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center space-x-4">
                                     <svg 
@@ -140,7 +150,7 @@ export default function PastPapers() {
                             onDragLeave={handleDragLeave}
                             onDrop={handleDrop}
                             className={`
-                                mt-12 p-12 rounded-2xl border-2 border-dashed transition-all duration-300 cursor-pointer
+                                mt-6 p-6 rounded-2xl border-2 border-dashed transition-all duration-300 cursor-pointer
                                 flex flex-col items-center justify-center
                                 ${isDragging 
                                     ? 'border-[#86efac] bg-[#86efac]/5' 
@@ -156,11 +166,11 @@ export default function PastPapers() {
                                 onChange={handleFileSelect}
                                 className="hidden"
                             />
-                            <div className={`w-24 h-24 mb-6 border-2 border-dashed rounded-lg flex items-center justify-center
+                            <div className={`w-20 h-20 mb-4 border-2 border-dashed rounded-lg flex items-center justify-center
                                 ${errorMessage ? 'border-red-500' : 'border-[#8B7FFF]/40'}`}>
                                 {selectedFile ? (
                                     <svg 
-                                        className="w-12 h-12 text-[#86efac]" 
+                                        className="w-10 h-10 text-[#86efac]" 
                                         fill="none" 
                                         stroke="currentColor" 
                                         viewBox="0 0 24 24"
@@ -174,7 +184,7 @@ export default function PastPapers() {
                                     </svg>
                                 ) : (
                                     <svg 
-                                        className={`w-12 h-12 ${errorMessage ? 'text-red-500' : 'text-[#8B7FFF]/40'}`}
+                                        className={`w-10 h-10 ${errorMessage ? 'text-red-500' : 'text-[#8B7FFF]/40'}`}
                                         fill="none" 
                                         stroke="currentColor" 
                                         viewBox="0 0 24 24"
@@ -189,16 +199,16 @@ export default function PastPapers() {
                                 )}
                             </div>
                             {errorMessage ? (
-                                <p className="text-xl text-red-500 text-center mb-2">
+                                <p className="text-lg text-red-500 text-center mb-2">
                                     {errorMessage}
                                 </p>
                             ) : selectedFile ? (
-                                <p className="text-xl text-[#86efac] text-center mb-2">
+                                <p className="text-lg text-[#86efac] text-center mb-2">
                                     {selectedFile.name}
                                 </p>
                             ) : (
                                 <>
-                                    <p className="text-xl text-[#B39DDB]/70 text-center mb-2">
+                                    <p className="text-lg text-[#B39DDB]/70 text-center mb-2">
                                         Drop PDF File Here
                                     </p>
                                     <p className="text-sm text-[#B39DDB]/50 text-center">
@@ -209,12 +219,49 @@ export default function PastPapers() {
                         </div>
                     )}
 
+                    {/* Difficulty Selection */}
+                    {!isGenerated && !isGenerating && (
+                        <div className="mt-5 p-5 rounded-2xl bg-black/20 border border-[#8B7FFF]/20">
+                            <div className="flex items-center justify-between mb-4">
+                                <label className="text-lg text-white font-medium">Difficulty Level</label>
+                                <span className={`text-lg font-bold ${
+                                    difficulty === 1 ? 'text-[#86efac]' : 
+                                    difficulty === 2 ? 'text-yellow-400' :
+                                    'text-red-500'
+                                }`}>
+                                    {getDifficultyLabel(difficulty)}
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-4">
+                                {[1, 2, 3].map((value) => (
+                                    <button
+                                        key={value}
+                                        onClick={() => setDifficulty(value)}
+                                        className={`
+                                            py-3 px-4 rounded-xl font-medium transition-all duration-200
+                                            ${value === 1 && difficulty === value
+                                                ? 'bg-[#86efac]/20 text-[#86efac] border-2 border-[#86efac]'
+                                                : value === 2 && difficulty === value
+                                                ? 'bg-yellow-500/20 text-yellow-400 border-2 border-yellow-400'
+                                                : value === 3 && difficulty === value
+                                                ? 'bg-red-500/20 text-red-500 border-2 border-red-500'
+                                                : 'bg-black/20 text-[#B39DDB]/70 border-2 border-[#8B7FFF]/20 hover:border-[#8B7FFF]/40'
+                                            }
+                                        `}
+                                    >
+                                        {getDifficultyLabel(value)}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Generate Button */}
                     {!isGenerated && (
                         <button 
                             onClick={handleGenerate}
                             className={`
-                                w-full mt-8 py-4 rounded-xl font-semibold transition-all duration-300 cursor-pointer
+                                w-full mt-5 py-2.5 rounded-xl font-semibold transition-all duration-300
                                 ${selectedFile 
                                     ? 'bg-gradient-to-r from-[#86efac] to-[#8B7FFF] text-white hover:opacity-90'
                                     : 'bg-[#8B7FFF]/20 text-[#B39DDB]/50 cursor-not-allowed'
@@ -222,7 +269,7 @@ export default function PastPapers() {
                             `}
                             disabled={isGenerating}
                         >
-                            {isGenerating ? 'Generating...' : 'Generate New Paper'}
+                            {isGenerating ? 'Generating...' : 'Generate New Papers'}
                         </button>
                     )}
                 </div>

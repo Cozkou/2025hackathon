@@ -29,7 +29,7 @@ export default function Calendar() {
                         {/* Calendar grid placeholder */}
                         <div className="col-span-7">
                             <p className="text-[#B39DDB]/70 text-center py-8">
-                                Calendar implementation coming soon...
+                                Calendar coming soon...
                             </p>
                         </div>
                     </div>
