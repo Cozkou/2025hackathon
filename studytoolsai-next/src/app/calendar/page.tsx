@@ -2,15 +2,16 @@
 
 import { useState } from 'react';
 import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+
 export default function Calendar() {
     const [selectedDate, setSelectedDate] = useState(new Date());
 
     return (
-        <div className="min-h-screen bg-gradient-to-b from-[#0A0B1A] to-[#141529]">
-
+        <div className="min-h-screen bg-gradient-to-b from-[#0A0B1A] to-[#141529] flex flex-col">
             <Header />
 
-            <main className="container mx-auto px-4 py-8">
+            <main className="flex-1 container mx-auto px-4 pt-32">
                 <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-[#8B7FFF]/20 p-8">
                     <h1 className="text-4xl font-bold text-white mb-8 font-['Poppins']">
                         Calendar
@@ -28,12 +29,14 @@ export default function Calendar() {
                         {/* Calendar grid placeholder */}
                         <div className="col-span-7">
                             <p className="text-[#B39DDB]/70 text-center py-8">
-                                Calendar implementation coming soon...
+                                Calendar coming soon...
                             </p>
                         </div>
                     </div>
                 </div>
             </main>
+
+            <Footer />
         </div>
     );
 }

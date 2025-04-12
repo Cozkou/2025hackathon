@@ -1,5 +1,6 @@
 'use client';
 
+import Footer from '@/components/Footer';
 import Header from '@/components/Header';
 
 export default function Home() {
@@ -8,11 +9,11 @@ export default function Home() {
             <Header />
             
             {/* Main Content */}
-            <div className="container mx-auto px-4 pt-24 flex-1">
-                <div className="flex flex-col items-center text-center max-w-5xl mx-auto mt-24">
+            <div className="container mx-auto px-4 pt-36 flex-1">
+                <div className="flex flex-col items-center text-center max-w-5xl mx-auto mt-10">
                     <div className="flex items-center justify-between w-full gap-2 mb-20">
                         <div className="flex-1 max-w-2xl pr-4">
-                            <h1 className="text-7xl font-bold text-left bg-gradient-to-r from-[#86efac] via-[#8B7FFF] to-[#B39DDB] text-transparent bg-clip-text font-['Poppins'] drop-shadow-lg animate-gradient">
+                            <h1 className="text-7xl font-bold text-left bg-gradient-to-r from-[#86efac] via-[#8B7FFF] to-[#B39DDB] text-transparent bg-clip-text font-['Poppins'] drop-shadow-lg animate-gradient pb-2 leading-[1.2]">
                                 StudyToolsAI
                             </h1>
                             <p className="text-xl text-left text-[#B39DDB]/70 font-['Inter'] leading-relaxed tracking-wide mt-6 max-w-xl">
@@ -40,7 +41,7 @@ export default function Home() {
                     </div>
 
                     {/* Features Section */}
-                    <div className="mt-8" id="features">
+                    <div className="" id="features">
                         <h2 className="text-4xl font-bold text-center mb-16 text-white font-['Playfair_Display'] bg-gradient-to-r from-[#86efac] via-[#8B7FFF] to-[#B39DDB] text-transparent bg-clip-text relative">
                             Your All-in-One Student Hub
                             <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 w-24 h-1 bg-gradient-to-r from-[#86efac] to-[#8B7FFF] rounded-full"></div>
@@ -75,22 +76,7 @@ export default function Home() {
                 </div>
             </div>
 
-            {/* Footer */}
-            <footer className="border-t border-[#8B7FFF]/10 mt-auto">
-                <div className="container mx-auto px-4 py-4">
-                    <div className="flex justify-center space-x-8">
-                        <a href="/terms" className="text-sm text-[#B39DDB]/50 hover:text-[#B39DDB] transition-colors">
-                            Terms of Service
-                        </a>
-                        <a href="/cookies" className="text-sm text-[#B39DDB]/50 hover:text-[#B39DDB] transition-colors">
-                            Cookies Policy
-                        </a>
-                        <a href="/privacy" className="text-sm text-[#B39DDB]/50 hover:text-[#B39DDB] transition-colors">
-                            Privacy Policy
-                        </a>
-                    </div>
-                </div>
-            </footer>
+            <Footer />
         </div>
     );
 }
