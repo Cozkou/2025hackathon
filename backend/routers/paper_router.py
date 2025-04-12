@@ -20,13 +20,10 @@ async def generate_paper(
 ):
     try:
         paper_id = str(uuid.uuid4())
-        output_path = await paper_service.generate(pdf_file, difficulty, paper_id)
+        result = await paper_service.generate(pdf_file, difficulty, paper_id)
         
-        return {
-            "status": "success",
-            "paper_id": paper_id,
-            "message": "Paper generated successfully"
-        }
+        return result  # This will now return the text preview and length
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
