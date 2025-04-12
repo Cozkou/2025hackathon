@@ -1,5 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 
 const Header = () => {
@@ -15,8 +16,15 @@ const Header = () => {
             <div className="backdrop-blur-sm">
                 <div className="container mx-auto px-6 py-6">
                     <div className="flex items-center justify-between">
-                        <Link href="/" className="text-3xl font-bold bg-gradient-to-r from-[#86efac] via-[#8B7FFF] to-[#B39DDB] text-transparent bg-clip-text font-['Poppins'] hover:scale-105 transition-transform duration-300">
-                            StudyToolsAI
+                        <Link href="/">
+                            <Image
+                                src="/logo.png"
+                                alt="StudyToolsAI Logo"
+                                width={180}
+                                height={40}
+                                className="h-auto"
+                                priority
+                            />
                         </Link>
                         <nav className="flex items-center space-x-8">
                             <Link 
