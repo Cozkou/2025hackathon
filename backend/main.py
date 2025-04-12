@@ -4,8 +4,9 @@ from typing import List, Optional
 from fastapi.middleware.cors import CORSMiddleware
 from google_calendar import create_event_in_calendar, find_free_time_in_calendar
 from pydantic import BaseModel
-from routers import paper_router
+from routers import paper_router, calendar_router
 import json
+from services.paper_generator import router as paper_generator_router
 
 class DifficultyLevel(str, Enum):
     SAME = "same"
@@ -17,14 +18,16 @@ app = FastAPI()
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000"],  # Frontend URL
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
 )
 
 # Add routers
 app.include_router(paper_router.router)
+app.include_router(paper_generator_router, prefix="/")
+app.include_router(calendar_router.router)
 
 @app.get("/")
 def read_root():
