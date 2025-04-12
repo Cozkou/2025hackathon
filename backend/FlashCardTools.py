@@ -2,7 +2,11 @@ import os
 import re
 import random
 from dotenv import load_dotenv
-from typing import List, Optional
+from typing import Dict, Any, Optional, List
+from PyPDF2 import PdfReader # type: ignore
+from fastapi import UploadFile, HTTPException
+import uuid
+import json
 from portia import (
     Config,
     LLMModel,
@@ -35,45 +39,36 @@ class FlashcardGenerator:
             llm_model_name=LLMModel.CLAUDE_3_5_SONNET,
             anthropic_api_key=ANTHROPIC_API_KEY
         )
+        self.upload_dir = "uploads"
+        os.makedirs(self.upload_dir, exist_ok=True)
         self.portia = Portia(config=self.anthropic_config, tools=example_tool_registry)
     
-    """
-    def extract_text_from_pdf(self, pdf_path: str) -> str:
-        #placeholder for extracting text from pdf
-    """
-    def extract_text_from_pdf(self):
-        # example past paper content
-        return '''
-Page 1:
 
-Green Lawns International School
-Green Lawns was established in 1960 by Mr Alim Shadid as a small international boarding school. It expanded slowly through the 1970s and 1980s, but gained a solid reputation for excellent teaching and impressive examination results. Mr Shadid built up a team of highly-qualified staff, many of whom held advanced academic qualifications and had many years of successful teaching experience and examination results. His democratic management style worked well in a small organisation. He was respected and knew all of the staff personally. Teachers were delegated authority and were allowed a great deal of personal autonomy as long as they achieved excellent results. They had high levels of motivation and worked hard, and the school had very low staff turnover.
-
-In the 1990s, however, the school expanded to 800 students. Mr Shadid, stressed with the effort of directing all aspects of the business, decided to look for a buyer. He changed the legal structure to that of a private limited company and in 2002 he accepted a substantial offer from an offshore educational investment company called Edu-invest.
-
-Edu-invest put in a new Business Head, Rick Summers, as the ultimate decision-maker in the school. Rick was in his mid-thirties and had a successful background in corporate management with a multinational food manufacturer. He brought in three of his ex-colleagues to run HR, marketing and accounting. With increased profits now a primary concern, whenever experienced teachers left they were replaced by younger, single staff, some of whom had no teaching qualifications. It was therefore possible to cut the salary bill by 20%. During the economic boom, student intake rose rapidly from 800 to 2600 and classes were combined, doubling the average class size. Rick reorganised to implement a matrix management structure of teams with only the central management team of four authorised to make any major decisions. A number of teachers lost their jobs after criticising the management team. At this point, parents began to complain. The situation came to a head in January 2010 when the teachers’ car park was requisitioned to build a new classroom and the free education of teachers’ children was stopped. Teachers formed a union and went on strike.
-
-SL questions: 20 marks, 35 minutes
-1 Define the following terms:
-a motivation (2)
-b delegation. (2)
-2 Explain two reasons why a democratic leadership style may have been successful for Green Lawns in the 1970s and 1980s. (4)
-3 With reference to Green Lawns, discuss two forms of non-financial motivation that could be used to improve staff relations. (6)
-4 Explain whether Herzberg would view the teachers’ car park as a hygiene factor or a motivator. (6)
-
-⸻
-
-Page 2:
-
-HL questions 25 marks, 45 minutes
-1 Define the following terms:
-a motivation (2)
-b delegation. (2)
-2 Identify two characteristics of working in teams that the new management of Green Lawns might have thought would improve staff motivation. (2)
-3 With reference to the car park problem, analyse why businesses such as Green Lawns may use non-financial motivation. (4)
-4 Use Likert’s theory to analyse the leadership style of the new management. (6)
-5 With reference to two motivation theories, analyse the decision to move from a democratic management structure to a structure with a centralised management team of four. (9)
-'''
+   
+    def extract_text_from_pdf(self, pdf_content: bytes) -> str:
+        """Extract text content from PDF"""
+        try:
+            # Create a temporary file to store the PDF content
+            temp_path = os.path.join(self.upload_dir, "testpdf.pdf")
+            with open(temp_path, "wb") as f:
+                f.write(pdf_content)
+            
+            # Read the PDF
+            reader = PdfReader(temp_path)
+            text = ""
+            for page in reader.pages:
+                text += page.extract_text()
+                
+            # Clean up
+            os.remove(temp_path)
+            return text
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error reading PDF: {str(e)}")
+    def get_paper_path(self, paper_id: str) -> Optional[str]:
+        """Get the path for a paper. Returns None if doesn't exist"""
+        path = os.path.join(self.output_dir, f"{paper_id}.pdf")
+        return path if os.path.exists(path) else None
     def preprocess_text(self, text: str) -> str:
         """Clean and preprocess the extracted text."""
         if not text:
@@ -84,36 +79,150 @@ b delegation. (2)
         # Additional preprocessing
         return text.strip()
     
-    def generate_flashcards(self, text: str, count: int = 10, subject: Optional[str] = None, difficulty: str="normal") -> List[Flashcard]:
-        """Generate flashcards from the provided text using LLM."""
+    def generate_flashcards(self, text: str, count: int = 10, subject: Optional[str] = None) -> Dict[str, Any]:
+        """Generate flashcards from the provided text using LLM with structured output."""
         if not text:
             raise ValueError("Cannot generate flashcards from empty text")
         
         if count < 1:
             raise ValueError("Flashcard count must be at least 1")
         
-        # for difficulty, there exists 3 options: easier, same, difficult
-        prompt = self._create_flashcard_prompt(text, count, subject)
-        
         try:
+            # Create a structured plan for flashcard generation
+            plan = str([
+                {
+                    "tool": "content_analyzer",
+                    "input": {
+                        "content": text,
+                        "subject": subject if subject else "auto-detect"
+                    },
+                    "description": """
+                    Analyze this past paper content to:
+                    1. Identify the main academic subject and specific topics covered
+                    2. Determine the academic level (high school, undergraduate, etc)
+                    3. Identify key concepts, theories, or methodologies being tested
+                    4. Extract important definitions, formulas, and principles
+                    5. Look for any subject-specific terminology or frameworks used
+                    6. Note any contextual clues about the intended learning outcomes
+                    """
+                },
+                {
+                    "tool": "flashcard_generator",
+                    "input": {
+                        "content": text,
+                        "topics": "$content_analyzer.topics",
+                        "count": count,
+                        "subject": subject if subject else "$content_analyzer.subject"
+                    },
+                    "description": f"""
+                    Generate {count} high-quality flashcards that:
+                    1. Focus on key concepts, definitions, or problem-solving techniques
+                    2. Have clear, concise questions
+                    3. Provide comprehensive but succinct answers
+                    4. Cover different topics from the content to ensure broad understanding
+                    5. Are formatted in a standard question-answer structure
+                    6. Include proper subject-specific terminology
+                    
+                    Return flashcards in the following standardized JSON format:
+                    {{
+                        "metadata": {{
+                            "source": "Past Paper Content",
+                            "subject": "Subject Name",
+                            "level": "Academic Level",
+                            "topics": ["List of topics covered"]
+                        }},
+                        "flashcards": [
+                            {{
+                                "id": "unique_id",
+                                "question": "The question text",
+                                "answer": "The answer text",
+                                "topic": "Specific topic this flashcard relates to",
+                                "difficulty": "easy|medium|hard"
+                            }}
+                        ]
+                    }}
+                    """
+                }
+            ])
             
-            plan_run = self.portia.run(prompt)
+            # Run the plan using Portia
+            result = self.portia.run(plan)
             
-            # Extract the response text from the PlanRun object
-            
-            response_text = plan_run.outputs.__str__() 
-            
-            # Parse the response to extract flashcards
-            flashcards = self._parse_flashcards_from_response(response_text)
-            
-            if not flashcards:
-                raise ValueError("Failed to generate any valid flashcards from the provided content")
+            # Extract structured data from the response
+            # Try to parse the result.output as JSON
+            try:
+                # First attempt: Try to parse the entire output as JSON
+                output_data = json.loads(result.output)
+                return output_data
+            except json.JSONDecodeError:
+                # Second attempt: Try to extract JSON from the text (in case there's surrounding text)
+                json_pattern = r'({[\s\S]*})'
+                match = re.search(json_pattern, result.output)
+                if match:
+                    try:
+                        output_data = json.loads(match.group(1))
+                        return output_data
+                    except json.JSONDecodeError:
+                        pass
                 
-            return flashcards
+                # If still no valid JSON, fallback to manual parsing
+                flashcards = self._parse_flashcards_from_response(result.output)
+                
+                # Convert to the desired structure
+                return {
+                    "metadata": {
+                        "source": "Past Paper Content",
+                        "subject": subject or "Auto-detected",
+                        "level": "Not specified",
+                        "topics": []
+                    },
+                    "flashcards": [
+                        {
+                            "id": str(uuid.uuid4()),
+                            "question": card["question"],
+                            "answer": card["answer"],
+                            "topic": "General",
+                            "difficulty": "medium"
+                        } for card in flashcards
+                    ]
+                }
             
         except Exception as e:
             raise RuntimeError(f"Error generating flashcards with LLM: {str(e)}")
-    
+    def generate(self, pdf_file: UploadFile, difficulty: str, paper_id: str) -> str:
+        """
+        Main function that:
+        1. Gets PDF content
+        2. Sends to Claude
+        """
+        try:
+            # Read the uploaded PDF
+            pdf_content = pdf_file.read()
+            
+            # For testing: Extract and return the text
+            extracted_text =  self.extract_text_from_pdf(pdf_content)
+            print("Extracted text from PDF:")
+            print("-" * 50)
+            print(extracted_text)
+            print("-" * 50)
+
+
+            # Generate new paper content using the extracted text and difficulty
+            paper_content =  self.gene(extracted_text, difficulty)
+            
+            print(paper_content)
+            
+            
+            # Return temporary success message with first 100 chars of text
+            return {
+                "status": "success",
+                "text_preview": extracted_text[:100] + "...",
+                "text_length": len(extracted_text)
+            }
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e)) 
+    '''
     def _create_flashcard_prompt(self, text: str, count: int, subject: Optional[str]) -> str:
         """Create a prompt for the LLM to generate flashcards."""
         subject_str = f" on the subject of {subject}" if subject else ""
@@ -134,7 +243,7 @@ b delegation. (2)
         Do not search for additional information. Only use the content provided below:
         {text[:4000]}  # Limit text to avoid token limits
         """
-    
+    '''
     def _parse_flashcards_from_response(self, response_text: str) -> List[Flashcard]:
         """Parse the LLM response to extract flashcards."""
         flashcards = []
