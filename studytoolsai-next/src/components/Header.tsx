@@ -14,14 +14,14 @@ const Header = () => {
         <header className="fixed top-0 left-0 right-0 z-50 bg-[#151B2B] border-b border-[#8B7FFF]/20">
             
             <div className="backdrop-blur-sm">
-                <div className="container mx-auto px-6 py-6">
+                <div className="container mx-auto px-6 py-5">
                     <div className="flex items-center justify-between">
-                        <Link href="/">
+                        <Link href="/" className="hover:scale-105 transition-transform duration-300">
                             <Image
                                 src="/logo.png"
                                 alt="StudyToolsAI Logo"
-                                width={180}
-                                height={40}
+                                width={200}
+                                height={60}
                                 className="h-auto"
                                 priority
                             />
