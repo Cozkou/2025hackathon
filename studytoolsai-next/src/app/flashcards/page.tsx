@@ -10,6 +10,10 @@ type Flashcard = {
     answer: string;
 };
 
+type CardState = {
+    isFlipped: boolean;
+};
+
 export default function Flashcards() {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [topicName, setTopicName] = useState('');
@@ -17,6 +21,7 @@ export default function Flashcards() {
     const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [showForm, setShowForm] = useState(true);
+    const [cardStates, setCardStates] = useState<Record<string, CardState>>({});
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -28,6 +33,15 @@ export default function Flashcards() {
             setSelectedFile(null);
             setErrorMessage('Please upload a valid PDF slide file');
         }
+    };
+
+    const handleCardFlip = (cardId: string) => {
+        setCardStates(prev => ({
+            ...prev,
+            [cardId]: {
+                isFlipped: !prev[cardId]?.isFlipped
+            }
+        }));
     };
 
     const handleGenerate = () => {
@@ -61,6 +75,12 @@ export default function Flashcards() {
             ];
 
             setFlashcards(mockFlashcards);
+            // Initialize card states
+            const initialCardStates = mockFlashcards.reduce((acc, card) => {
+                acc[card.id] = { isFlipped: false };
+                return acc;
+            }, {} as Record<string, CardState>);
+            setCardStates(initialCardStates);
             setIsLoading(false);
             setShowForm(false);
         }, 1500);
@@ -164,9 +184,28 @@ export default function Flashcards() {
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {flashcards.map((card) => (
-                                    <div key={card.id} className="bg-black/20 p-6 rounded-xl border border-[#8B7FFF]/40 hover:border-[#86efac] transition-colors cursor-pointer">
-                                        <h3 className="text-xl font-semibold text-white mb-2">{card.question}</h3>
-                                        <p className="text-[#B39DDB]/70">{card.answer}</p>
+                                    <div 
+                                        key={card.id} 
+                                        onClick={() => handleCardFlip(card.id)}
+                                        className="relative h-[200px] cursor-pointer perspective-1000"
+                                    >
+                                        <div 
+                                            className={`relative w-full h-full transition-transform duration-500 transform-style-preserve-3d ${
+                                                cardStates[card.id]?.isFlipped ? 'rotate-y-180' : ''
+                                            }`}
+                                        >
+                                            {/* Front of card */}
+                                            <div className="absolute w-full h-full backface-hidden bg-black/20 p-6 rounded-xl border border-[#8B7FFF]/40 hover:border-[#86efac] transition-colors">
+                                                <h3 className="text-xl font-semibold text-white mb-2">Question</h3>
+                                                <p className="text-[#B39DDB]/70">{card.question}</p>
+                                            </div>
+                                            
+                                            {/* Back of card */}
+                                            <div className="absolute w-full h-full backface-hidden bg-black/20 p-6 rounded-xl border border-[#8B7FFF]/40 hover:border-[#86efac] transition-colors rotate-y-180">
+                                                <h3 className="text-xl font-semibold text-white mb-2">Answer</h3>
+                                                <p className="text-[#B39DDB]/70">{card.answer}</p>
+                                            </div>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
