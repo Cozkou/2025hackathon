@@ -3,6 +3,7 @@
 import { useState, ChangeEvent, useEffect, useRef } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import { BsLightbulb, BsBarChartLine, BsStars } from 'react-icons/bs';
 
 type Message = {
     role: 'user' | 'assistant';
@@ -307,44 +308,100 @@ export default function TeachBackPage() {
                                 {/* Grade Slider */}
                                 <div>
                                     <label className="block text-[#B39DDB]/70 mb-2 font-['Inter']">Grade Level</label>
-                                    <div className="flex items-center space-x-4">
+                                    <div className="relative">
                                         <input
                                             type="range"
                                             min="1"
                                             max="13"
                                             value={grade}
                                             onChange={handleGradeChange}
-                                            className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#8B7FFF]"
+                                            className="w-full h-2 bg-gradient-to-r from-[#86efac] via-[#8B7FFF] to-[#B39DDB] rounded-lg appearance-none cursor-pointer"
+                                            style={{
+                                                backgroundSize: `${((grade - 1) / 12) * 100}% 100%`
+                                            }}
                                         />
-                                        <span className="text-white min-w-[3rem]">{grade === 13 ? 'University' : `Grade ${grade}`}</span>
+                                        <div className="flex justify-between px-1 mt-4">
+                                            <div 
+                                                className={`flex flex-col items-center transition-all duration-300 ${
+                                                    grade <= 6 ? 'transform scale-110 text-white' : 'text-[#B39DDB]/50'
+                                                }`}
+                                            >
+                                                <span className="text-sm font-medium">Primary</span>
+                                                <span className="text-xs">(1-6)</span>
+                                            </div>
+                                            <div 
+                                                className={`flex flex-col items-center transition-all duration-300 ${
+                                                    grade > 6 && grade <= 12 ? 'transform scale-110 text-white' : 'text-[#B39DDB]/50'
+                                                }`}
+                                            >
+                                                <span className="text-sm font-medium">Secondary</span>
+                                                <span className="text-xs">(7-12)</span>
+                                            </div>
+                                            <div 
+                                                className={`flex flex-col items-center transition-all duration-300 ${
+                                                    grade === 13 ? 'transform scale-110 text-white' : 'text-[#B39DDB]/50'
+                                                }`}
+                                            >
+                                                <span className="text-sm font-medium">University</span>
+                                                <span className="text-xs">(13)</span>
+                                            </div>
+                                        </div>
+                                        <div className="absolute -top-8 left-0 w-full">
+                                            <div 
+                                                className="text-white bg-[#8B7FFF] px-2 py-1 rounded text-sm"
+                                                style={{ 
+                                                    position: 'absolute',
+                                                    left: `calc(${((grade - 1) / 12) * 100}% - 1.5rem)`,
+                                                    transform: 'translateX(-50%)',
+                                                }}
+                                            >
+                                                {grade === 13 ? 'Uni' : `G${grade}`}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
                                 {/* Difficulty Slider */}
                                 <div>
                                     <label className="block text-[#B39DDB]/70 mb-2 font-['Inter']">Difficulty</label>
-                                    <div className="flex items-center space-x-4">
+                                    <div className="relative">
                                         <input
                                             type="range"
                                             min="0"
                                             max="2"
                                             value={difficulties.indexOf(difficulty)}
                                             onChange={handleDifficultyChange}
-                                            className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#8B7FFF]"
+                                            className="w-full h-2 bg-gradient-to-r from-[#86efac] via-[#8B7FFF] to-[#B39DDB] rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer"
                                         />
-                                        <div className="flex items-center space-x-2 min-w-[7rem]">
-                                            <span className="text-white capitalize">{difficulty}</span>
-                                            <span className="text-xl">
-                                                {difficulty === 'easy' && '🌱'} {/* Seedling for beginner-friendly */}
-                                                {difficulty === 'normal' && '🎯'} {/* Target for balanced */}
-                                                {difficulty === 'difficult' && '🚀'} {/* Rocket for advanced */}
-                                            </span>
+                                        <div className="flex justify-between px-1 mt-4">
+                                            {difficulties.map((level) => (
+                                                <div 
+                                                    key={level}
+                                                    className={`flex flex-col items-center transition-all duration-300 ${
+                                                        difficulty === level 
+                                                            ? 'transform scale-110 text-white' 
+                                                            : 'text-[#B39DDB]/50 hover:text-[#B39DDB]/70'
+                                                    }`}
+                                                    onClick={() => setDifficulty(level)}
+                                                    style={{ cursor: 'pointer' }}
+                                                >
+                                                    <div className={`text-xl mb-1 transition-transform duration-300 ${
+                                                        difficulty === level ? 'transform scale-110' : ''
+                                                    }`}>
+                                                        {level === 'easy' && <BsLightbulb className="w-5 h-5" />}
+                                                        {level === 'normal' && <BsBarChartLine className="w-5 h-5" />}
+                                                        {level === 'difficult' && <BsStars className="w-5 h-5" />}
+                                                    </div>
+                                                    <span className={`text-sm font-medium capitalize ${
+                                                        difficulty === level 
+                                                            ? 'text-white' 
+                                                            : 'text-[#B39DDB]/50'
+                                                    }`}>
+                                                        {level}
+                                                    </span>
+                                                </div>
+                                            ))}
                                         </div>
-                                    </div>
-                                    <div className="flex justify-between mt-1 text-xs text-[#B39DDB]/50 px-1">
-                                        <span className="flex items-center">🌱 Easy</span>
-                                        <span className="flex items-center">🎯 Normal</span>
-                                        <span className="flex items-center">🚀 Difficult</span>
                                     </div>
                                 </div>
 
