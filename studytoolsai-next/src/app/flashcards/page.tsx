@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
@@ -14,6 +14,11 @@ type CardState = {
     isFlipped: boolean;
 };
 
+type FileInfo = {
+    size: number;
+    text: string;
+};
+
 export default function Flashcards() {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [topicName, setTopicName] = useState('');
@@ -22,13 +27,38 @@ export default function Flashcards() {
     const [isLoading, setIsLoading] = useState(false);
     const [showForm, setShowForm] = useState(true);
     const [cardStates, setCardStates] = useState<Record<string, CardState>>({});
+    const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
+    const [cardCount, setCardCount] = useState(8);  // Default count
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Calculate suggested card count based on content length
+    const calculateSuggestedCount = (text: string): number => {
+        const wordCount = text.split(/\s+/).length;
+        // Rough heuristic: 1 card per 50 words, with min 5 and max 50
+        const suggested = Math.floor(wordCount / 50);
+        return Math.min(Math.max(suggested, 5), 50);
+    };
+
+    // Update suggested count when file changes
+    useEffect(() => {
+        if (fileInfo?.text) {
+            const suggested = calculateSuggestedCount(fileInfo.text);
+            setCardCount(suggested);
+        }
+    }, [fileInfo]);
+
+    const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file && file.type.includes('pdf')) {
             setSelectedFile(file);
             setErrorMessage('');
+            try {
+                const text = await file.text();
+                setFileInfo({ size: file.size, text });
+            } catch (error) {
+                console.error('Error reading file:', error);
+                setErrorMessage('Error reading file content');
+            }
         } else {
             setSelectedFile(null);
             setErrorMessage('Please upload a valid PDF slide file');
@@ -44,7 +74,7 @@ export default function Flashcards() {
         }));
     };
 
-    const handleGenerate = () => {
+    const handleGenerate = async () => {
         if (!topicName || !selectedFile) {
             setErrorMessage('Please enter a topic and upload a slide file');
             return;
@@ -53,37 +83,53 @@ export default function Flashcards() {
         setIsLoading(true);
         setErrorMessage('');
 
-        // Simulate API call delay
-        setTimeout(() => {
-            // Mock response data
-            const mockFlashcards: Flashcard[] = [
-                {
-                    id: '1',
-                    question: 'What is the capital of France?',
-                    answer: 'Paris'
-                },
-                {
-                    id: '2',
-                    question: 'What is the largest planet in our solar system?',
-                    answer: 'Jupiter'
-                },
-                {
-                    id: '3',
-                    question: 'What is the chemical symbol for gold?',
-                    answer: 'Au'
-                }
-            ];
+        try {
+            // Create form data
+            const formData = new FormData();
+            formData.append('pdf_file', selectedFile);
+            formData.append('subject', topicName);
+            formData.append('count', cardCount.toString());
 
-            setFlashcards(mockFlashcards);
+            // Make API call
+            const response = await fetch('http://localhost:8000/flashcards', {
+                method: 'POST',
+                body: formData,
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                // If the server returned an error message, use it
+                const errorMessage = data.detail || `Server error: ${response.status}`;
+                throw new Error(errorMessage);
+            }
+
+            if (!data.flashcards) {
+                throw new Error('Invalid response format from server');
+            }
+
+            const generatedFlashcards = JSON.parse(data.flashcards);
+
+            if (!Array.isArray(generatedFlashcards)) {
+                throw new Error('Invalid flashcards data format');
+            }
+
+            setFlashcards(generatedFlashcards);
+            
             // Initialize card states
-            const initialCardStates = mockFlashcards.reduce((acc, card) => {
+            const initialCardStates = generatedFlashcards.reduce((acc: Record<string, CardState>, card: Flashcard) => {
                 acc[card.id] = { isFlipped: false };
                 return acc;
-            }, {} as Record<string, CardState>);
+            }, {});
+            
             setCardStates(initialCardStates);
             setIsLoading(false);
             setShowForm(false);
-        }, 1500);
+        } catch (error) {
+            console.error('Error generating flashcards:', error);
+            setErrorMessage(error instanceof Error ? error.message : 'Failed to generate flashcards. Please try again.');
+            setIsLoading(false);
+        }
     };
 
     const handleBack = () => {
@@ -149,6 +195,43 @@ export default function Flashcards() {
                                     <p className="text-xl text-[#86efac]">{selectedFile.name}</p>
                                 ) : (
                                     <p className="text-xl text-[#B39DDB]/70">Click to upload your slide deck (PDF)</p>
+                                )}
+                            </div>
+
+                            {/* Flashcard Count Selector */}
+                            <div className="mt-6">
+                                <label className="block text-white text-lg mb-2">Number of Flashcards</label>
+                                <div className="flex items-center space-x-4">
+                                    <button 
+                                        onClick={() => setCardCount(Math.max(5, cardCount - 1))}
+                                        className="px-4 py-2 rounded-lg bg-[#8B7FFF]/20 text-[#B39DDB] hover:bg-[#8B7FFF]/30 transition-colors"
+                                    >
+                                        -
+                                    </button>
+                                    <input
+                                        type="number"
+                                        value={cardCount}
+                                        onChange={(e) => {
+                                            const value = parseInt(e.target.value);
+                                            if (!isNaN(value)) {
+                                                setCardCount(Math.min(Math.max(value, 5), 50));
+                                            }
+                                        }}
+                                        className="w-20 px-4 py-2 text-center rounded-lg bg-black/20 border border-[#8B7FFF]/40 text-white"
+                                        min="5"
+                                        max="50"
+                                    />
+                                    <button 
+                                        onClick={() => setCardCount(Math.min(50, cardCount + 1))}
+                                        className="px-4 py-2 rounded-lg bg-[#8B7FFF]/20 text-[#B39DDB] hover:bg-[#8B7FFF]/30 transition-colors"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                                {fileInfo && (
+                                    <p className="text-[#B39DDB]/70 mt-2">
+                                        Suggested count based on content: {calculateSuggestedCount(fileInfo.text)}
+                                    </p>
                                 )}
                             </div>
 

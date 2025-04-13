@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from google_calendar import create_event_in_calendar, find_free_time_in_calendar
 from pydantic import BaseModel
 from routers import paper_router, calendar_router
+from FlashCardTools import FlashcardGenerator
 import json
 
 class DifficultyLevel(str, Enum):
@@ -72,8 +73,22 @@ async def get_flashcards():
     return {"message": "Get flashcards will be implemented"}
 
 @app.post("/flashcards")
-async def create_flashcard():
-    return {"message": "Create flashcard will be implemented"}
+async def create_flashcard(
+    pdf_file: UploadFile = File(...),
+    subject: Optional[str] = Form(None),
+    count: Optional[int] = Form(8)
+):
+    try:
+        # Initialize the flashcard generator
+        generator = FlashcardGenerator()
+        
+        # Generate flashcards
+        flashcards_data = generator.generate(pdf_file, subject=subject, count=count)
+        
+        return flashcards_data
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Past Paper Generator Endpoints
 @app.post("/papers/generate")
