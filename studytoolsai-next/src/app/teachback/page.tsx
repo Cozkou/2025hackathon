@@ -321,37 +321,51 @@ export default function TeachBackPage() {
                                     </div>
                                 )}
                                 
-                                {/* Chat Messages */}
-                                <div 
-                                    ref={chatContainerRef}
-                                    className="flex-1 overflow-y-auto mb-4 space-y-4 pr-2"
-                                >
-                                    {messages.map((message, index) => (
+                                {/* Main Content Area - Chat Messages and Feedback */}
+                                <div className="flex-1 overflow-hidden">
+                                    {/* Show either Chat Messages or Feedback */}
+                                    {!feedback ? (
                                         <div 
-                                            key={index} 
-                                            className={`p-4 rounded-xl ${
-                                                message.role === 'user' 
-                                                    ? 'bg-[#8B7FFF]/20 ml-auto max-w-[80%]' 
-                                                    : 'bg-white/10 mr-auto max-w-[80%]'
-                                            }`}
+                                            ref={chatContainerRef}
+                                            className="h-full overflow-y-auto mb-4 space-y-4 pr-2"
                                         >
-                                            <p className="text-white whitespace-pre-wrap">{message.content}</p>
+                                            {messages.map((message, index) => (
+                                                <div 
+                                                    key={index} 
+                                                    className={`p-4 rounded-xl ${
+                                                        message.role === 'user' 
+                                                            ? 'bg-[#8B7FFF]/20 ml-auto max-w-[80%]' 
+                                                            : 'bg-white/10 mr-auto max-w-[80%]'
+                                                    }`}
+                                                >
+                                                    <p className="text-white whitespace-pre-wrap">{message.content}</p>
+                                                </div>
+                                            ))}
+                                            
+                                            {isLoading && (
+                                                <div className="bg-white/10 p-4 rounded-xl mr-auto max-w-[80%]">
+                                                    <div className="flex items-center space-x-2">
+                                                        <div className="w-2 h-2 bg-[#8B7FFF] rounded-full animate-bounce"></div>
+                                                        <div className="w-2 h-2 bg-[#8B7FFF] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                                                        <div className="w-2 h-2 bg-[#8B7FFF] rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                    ))}
-                                    
-                                    {isLoading && (
-                                        <div className="bg-white/10 p-4 rounded-xl mr-auto max-w-[80%]">
-                                            <div className="flex items-center space-x-2">
-                                                <div className="w-2 h-2 bg-[#8B7FFF] rounded-full animate-bounce"></div>
-                                                <div className="w-2 h-2 bg-[#8B7FFF] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                                                <div className="w-2 h-2 bg-[#8B7FFF] rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                                    ) : (
+                                        <div className="bg-[#8B7FFF]/10 rounded-xl border border-[#8B7FFF]/20 h-full flex flex-col">
+                                            <div className="p-6 border-b border-[#8B7FFF]/20">
+                                                <h3 className="text-2xl font-bold text-white">Feedback</h3>
+                                            </div>
+                                            <div className="p-6 flex-1 overflow-y-auto">
+                                                <p className="text-[#B39DDB]/90 whitespace-pre-wrap text-lg">{feedback}</p>
                                             </div>
                                         </div>
                                     )}
                                 </div>
                                 
                                 {/* Chat Input */}
-                                <div className="flex items-center space-x-2">
+                                <div className="flex items-center space-x-2 mt-4">
                                     <input
                                         type="text"
                                         placeholder={conversationEnded ? "Type 'end' to exit" : "Type your answer or 'end' to finish..."}
@@ -373,14 +387,6 @@ export default function TeachBackPage() {
                                         Send
                                     </button>
                                 </div>
-                                
-                                {/* Feedback Section */}
-                                {feedback && (
-                                    <div className="mt-6 p-4 bg-[#8B7FFF]/10 rounded-xl border border-[#8B7FFF]/20">
-                                        <h3 className="text-lg font-bold text-white mb-2">Feedback</h3>
-                                        <p className="text-[#B39DDB]/90 whitespace-pre-wrap">{feedback}</p>
-                                    </div>
-                                )}
                             </div>
                         </div>
                     )}
