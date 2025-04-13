@@ -78,6 +78,23 @@ const Header = () => {
                                         : 'w-0 group-hover:w-[80%] bg-gradient-to-r from-[#86efac] to-[#8B7FFF]'
                                 } transition-all duration-300`}></span>
                             </Link>
+                            <Link 
+                                href="/teachback" 
+                                className="flex flex-col items-center group"
+                            >
+                                <span className={`text-lg font-medium transition-colors duration-300 ${
+                                    isActivePath('/teachback') 
+                                        ? 'text-white' 
+                                        : 'text-[#B39DDB] group-hover:text-white'
+                                }`}>
+                                    TeachBack
+                                </span>
+                                <span className={`h-[2px] ${
+                                    isActivePath('/teachback')
+                                        ? 'w-[80%] bg-gradient-to-r from-[#86efac] to-[#8B7FFF]'
+                                        : 'w-0 group-hover:w-[80%] bg-gradient-to-r from-[#86efac] to-[#8B7FFF]'
+                                } transition-all duration-300`}></span>
+                            </Link>
                         </nav>
                     </div>
                 </div>
