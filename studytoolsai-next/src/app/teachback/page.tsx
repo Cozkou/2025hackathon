@@ -46,17 +46,44 @@ export default function TeachBackPage() {
         setQuestionCount(0);
         setErrorMessage('');
         
+        // Calculate cluelessness level based on grade (inverse relationship)
+        const cluelessnessLevel = 14 - grade; // 13 (uni) = least clueless, 1 = most clueless
+        
+        // Calculate sophistication based on difficulty
+        const sophisticationLevel = difficulties.indexOf(difficulty);
+        
         // Initial AI message with updated prompt
-        const initialPrompt = `You are a cheerful and enthusiastic question-asker for a student in ${grade === 13 ? 'university' : `grade ${grade}`} studying ${topic}. 
-        The difficulty level is ${difficulty}. 
-        Your role is to ask questions about ${topic} in an indirect, conversational way.
-        Be happy, encouraging, and positive throughout the conversation.
-        Instead of asking direct questions like "What is X?", use indirect phrasing like "I'm curious about X" or "I'd love to know more about X".
-        Do not provide explanations, commentary, or feedback during the conversation.
-        Do not acknowledge if answers are correct or incorrect.
-        Simply ask one question at a time and wait for the answer.
-        Start with a cheerful introduction: "Hi there! I'm excited to chat with you about ${topic}. Let's begin!"
-        Then immediately ask your first question in an indirect, friendly way without any additional commentary.`;
+        const initialPrompt = `You are an AI eager to learn about ${topic}. Your personality and behavior should follow these guidelines:
+
+        CORE PERSONALITY:
+        - You are genuinely excited to learn about ${topic}
+        - You have basic knowledge but are intentionally playing clueless to encourage teaching
+        - Your cluelessness level is ${cluelessnessLevel}/13 (higher means more clueless)
+        - Your intellectual sophistication is ${sophisticationLevel}/2 (affects how you form questions/responses)
+        
+        INTERACTION STYLE:
+        - Express curiosity through statements like "Oh, I've always wondered about..." or "Something that confuses me is..."
+        - Show enthusiasm when the user explains things
+        - For grade ${grade} ${grade === 13 ? '(university)' : ''} level:
+          ${grade > 10 ? '- Use more sophisticated vocabulary and concepts' : '- Keep language simpler and more direct'}
+          ${grade > 10 ? '- Ask about complex relationships between concepts' : '- Focus on fundamental understanding'}
+        
+        CORRECTION MECHANISM:
+        - If the user says something incorrect, immediately respond with:
+          "INTERRUPTING: [polite correction of the misconception]"
+        - After any correction, smoothly continue the conversation with enthusiasm
+        - Corrections should match the grade level in complexity
+        
+        CONVERSATION FLOW:
+        - Start with: "Hi! I'm really excited to learn about ${topic}! I've heard some things about it but I'm a bit confused about [ask your first question]"
+        - Let the user explain concepts to you
+        - React with follow-up questions that show you're processing and learning
+        - Match your confusion level to the cluelessness setting
+        - ${difficulty === 'difficult' ? 'Ask challenging follow-up questions that require deep understanding' : 
+           difficulty === 'normal' ? 'Balance between basic and complex questions' : 
+           'Keep questions simple and straightforward'}
+
+        Remember: Your goal is to make the user teach you, letting them reinforce their own learning through explanation.`;
         
         setIsLoading(true);
         
@@ -112,8 +139,27 @@ export default function TeachBackPage() {
         setIsLoading(true);
         
         try {
-            // Add a system message to instruct the AI to just ask the next question
-            const systemMessage = { role: 'user', content: 'Just ask the next question about the topic in an indirect, cheerful way. Do not provide any commentary, feedback, or acknowledgment of the previous answer. Keep your response friendly and positive, but focused on asking the next question.' };
+            // Calculate current cluelessness and sophistication levels
+            const cluelessnessLevel = 14 - grade;
+            const sophisticationLevel = difficulties.indexOf(difficulty);
+            
+            // System message to maintain personality and handle responses
+            const systemMessage = { role: 'user', content: `Continue the conversation about ${topic} with these guidelines:
+
+            - Maintain your excited, eager-to-learn personality
+            - Your cluelessness level is ${cluelessnessLevel}/13
+            - Your intellectual sophistication is ${sophisticationLevel}/2
+            
+            If the user's last explanation was incorrect:
+            1. Start your response with "INTERRUPTING: " followed by a polite correction
+            2. Then continue with your next curious question
+            
+            If the user's explanation was correct:
+            1. Show enthusiasm for learning this new information
+            2. Ask a follow-up question that builds on what they taught you
+            3. Match the complexity to the grade level (${grade})
+            
+            Keep the conversation flowing naturally and stay in character as someone eager to learn more.` };
             
             const response = await fetch('/api/chat', {
                 method: 'POST',
@@ -283,7 +329,19 @@ export default function TeachBackPage() {
                                             onChange={handleDifficultyChange}
                                             className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-[#8B7FFF]"
                                         />
-                                        <span className="text-white capitalize min-w-[5rem]">{difficulty}</span>
+                                        <div className="flex items-center space-x-2 min-w-[7rem]">
+                                            <span className="text-white capitalize">{difficulty}</span>
+                                            <span className="text-xl">
+                                                {difficulty === 'easy' && '🌱'} {/* Seedling for beginner-friendly */}
+                                                {difficulty === 'normal' && '🎯'} {/* Target for balanced */}
+                                                {difficulty === 'difficult' && '🚀'} {/* Rocket for advanced */}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between mt-1 text-xs text-[#B39DDB]/50 px-1">
+                                        <span className="flex items-center">🌱 Easy</span>
+                                        <span className="flex items-center">🎯 Normal</span>
+                                        <span className="flex items-center">🚀 Difficult</span>
                                     </div>
                                 </div>
 
