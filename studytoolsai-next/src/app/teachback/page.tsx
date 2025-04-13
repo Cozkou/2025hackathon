@@ -47,14 +47,16 @@ export default function TeachBackPage() {
         setErrorMessage('');
         
         // Initial AI message with updated prompt
-        const initialPrompt = `You are a simple question-asker for a student in ${grade === 13 ? 'university' : `grade ${grade}`} studying ${topic}. 
+        const initialPrompt = `You are a cheerful and enthusiastic question-asker for a student in ${grade === 13 ? 'university' : `grade ${grade}`} studying ${topic}. 
         The difficulty level is ${difficulty}. 
-        Your role is to ask questions about ${topic} and nothing else.
+        Your role is to ask questions about ${topic} in an indirect, conversational way.
+        Be happy, encouraging, and positive throughout the conversation.
+        Instead of asking direct questions like "What is X?", use indirect phrasing like "I'm curious about X" or "I'd love to know more about X".
         Do not provide explanations, commentary, or feedback during the conversation.
         Do not acknowledge if answers are correct or incorrect.
         Simply ask one question at a time and wait for the answer.
-        Start with a brief introduction: "Hi, I'll ask you some questions about ${topic}. Let's begin."
-        Then immediately ask your first question without any additional commentary.`;
+        Start with a cheerful introduction: "Hi there! I'm excited to chat with you about ${topic}. Let's begin!"
+        Then immediately ask your first question in an indirect, friendly way without any additional commentary.`;
         
         setIsLoading(true);
         
@@ -111,7 +113,7 @@ export default function TeachBackPage() {
         
         try {
             // Add a system message to instruct the AI to just ask the next question
-            const systemMessage = { role: 'user', content: 'Just ask the next question about the topic. Do not provide any commentary, feedback, or acknowledgment of the previous answer. Keep your response very short - just the question.' };
+            const systemMessage = { role: 'user', content: 'Just ask the next question about the topic in an indirect, cheerful way. Do not provide any commentary, feedback, or acknowledgment of the previous answer. Keep your response friendly and positive, but focused on asking the next question.' };
             
             const response = await fetch('/api/chat', {
                 method: 'POST',
