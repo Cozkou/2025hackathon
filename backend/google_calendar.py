@@ -20,7 +20,7 @@ def find_free_time_in_calendar(date: str, start_time: str, end_time: str, constr
 	Check my Google Calendar availability.
 	Date: {date}
 	Between: {start_time} and {end_time}.
-	Return results as JSON with start and end times.
+	Return results as JSON with start and end times in ISO format.
 	{'Constraints: ' + ', '.join(constraints) if constraints else ''}
 	"""
 
@@ -29,16 +29,68 @@ def find_free_time_in_calendar(date: str, start_time: str, end_time: str, constr
 		plan = portia.plan(prompt)
 		run_result = portia.run_plan(plan)
 		run_data = run_result.model_dump()
-		final_output = run_data.get("final_output", {})
-
+		
+		print("Full Portia response:", json.dumps(run_data, indent=2))  # Debug print
+		
+		# Extract availability from step outputs
+		availability = []
+		step_outputs = run_data.get("outputs", {}).get("step_outputs", {})
+		
+		# Try to get availability from $availability
+		if "$availability" in step_outputs:
+			availability_json = step_outputs["$availability"].get("value", "[]")
+			try:
+				availability = json.loads(availability_json)
+				print("Parsed availability from $availability:", availability)
+			except json.JSONDecodeError as e:
+				print("Failed to parse $availability:", e)
+		
+		# If not found, try $formatted_availability
+		if not availability and "$formatted_availability" in step_outputs:
+			formatted_json = step_outputs["$formatted_availability"].get("value", "{}")
+			try:
+				parsed_json = json.loads(formatted_json)
+				availability = parsed_json.get("availability", [])
+				print("Parsed availability from $formatted_availability:", availability)
+			except json.JSONDecodeError as e:
+				print("Failed to parse $formatted_availability:", e)
+		
+		# If still not found, try final output
+		if not availability:
+			final_output = run_data.get("outputs", {}).get("final_output", {}).get("value", "{}")
+			try:
+				parsed_final = json.loads(final_output)
+				availability = parsed_final.get("availability", [])
+				print("Parsed availability from final_output:", availability)
+			except json.JSONDecodeError as e:
+				print("Failed to parse final_output:", e)
+		
+		print("Extracted raw availability:", availability)  # Debug print
+		
+		# Format the slots
+		formatted_slots = []
+		for slot in availability:
+			if isinstance(slot, dict) and "start" in slot and "end" in slot:
+				# Remove timezone info if present (frontend expects simple time)
+				start = slot["start"].split("+")[0] if "+" in slot["start"] else slot["start"]
+				end = slot["end"].split("+")[0] if "+" in slot["end"] else slot["end"]
+				
+				formatted_slots.append({
+					"start": start,
+					"end": end
+				})
+		
+		print("Formatted slots:", formatted_slots)  # Debug print
+		
 		return json.dumps({
 			"success": True,
 			"date": date,
-			"free_slots": final_output.get("free_slots", []),
-			"full_response": final_output
+			"free_slots": formatted_slots,
+			"full_response": {}  # Simplified to avoid large response
 		}, indent=2)
 
 	except Exception as e:
+		print("Error in find_free_time_in_calendar:", str(e))  # Debug print
 		return json.dumps({
 			"success": False,
 			"error": str(e),

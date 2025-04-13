@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Call the backend API
-    const response = await fetch('http://localhost:8000/calendar/event', {
+    const response = await fetch('http://backend:8000/calendar/event', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

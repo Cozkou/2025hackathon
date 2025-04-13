@@ -13,6 +13,12 @@ interface Event {
     date: Date;
 }
 
+// Add interface for free slots
+interface FreeSlot {
+    start: string;
+    end: string;
+}
+
 export default function Calendar() {
     // State for selected day and time range
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -31,13 +37,22 @@ export default function Calendar() {
     const [isSelectingStart, setIsSelectingStart] = useState<boolean>(true);
     
     // Add new state for free time slots
-    const [freeSlots, setFreeSlots] = useState<Array<{start: string, end: string}>>([]);
+    const [freeSlots, setFreeSlots] = useState<FreeSlot[]>([]);
     const [isCheckingFreeTime, setIsCheckingFreeTime] = useState(false);
     const [freeTimeError, setFreeTimeError] = useState<string | null>(null);
     
     // Add new state for slider values
     const [sliderStartValue, setSliderStartValue] = useState<number>(9);
     const [sliderEndValue, setSliderEndValue] = useState<number>(20);
+    
+    // Add new state for auth URL
+    const [authUrl, setAuthUrl] = useState<string | null>(null);
+    
+    // Add email state
+    const [email, setEmail] = useState<string>('');
+    
+    // Add new state for checking time slots
+    const [hasCheckedTimeSlots, setHasCheckedTimeSlots] = useState(false);
     
     // Initialize with today's date
     useEffect(() => {
@@ -183,20 +198,41 @@ export default function Calendar() {
     
     const nextDays = getNextDays();
     
+    // Function to format time from ISO string
+    const formatTimeFromISO = (isoString: string): string => {
+        const date = new Date(isoString);
+        return date.toLocaleTimeString('default', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+    };
+
     // Function to check free time slots
     const checkFreeTime = async () => {
-        if (!selectedDate || startHour === null || endHour === null) return;
+        if (!selectedDate || startHour === null || endHour === null || !email) {
+            setFreeTimeError("Please provide your email address");
+            return;
+        }
 
         try {
             setIsCheckingFreeTime(true);
             setFreeTimeError(null);
+            setAuthUrl(null);
+            setHasCheckedTimeSlots(false);  // Reset at start of check
+            setFreeSlots([]); // Clear existing slots
 
-            // Format the date and time for the API request
             const formattedDate = selectedDate.toISOString().split('T')[0];
             const startTimeFormatted = `${startHour.toString().padStart(2, '0')}:00`;
             const endTimeFormatted = `${endHour.toString().padStart(2, '0')}:00`;
 
-            // Make API request to our Next.js API route
+            console.log('Sending request with:', {
+                date: formattedDate,
+                startTime: startTimeFormatted,
+                endTime: endTimeFormatted,
+                email: email,
+            });
+
             const response = await fetch('/api/calendar/free-slots', {
                 method: 'POST',
                 headers: {
@@ -206,6 +242,7 @@ export default function Calendar() {
                     date: formattedDate,
                     startTime: startTimeFormatted,
                     endTime: endTimeFormatted,
+                    email: email,
                 }),
             });
 
@@ -215,16 +252,44 @@ export default function Calendar() {
             }
 
             const data = await response.json();
+            console.log('Raw response data:', data);
             
-            if (data.freeSlots && Array.isArray(data.freeSlots)) {
-                setFreeSlots(data.freeSlots);
-            } else {
+            if (data.requires_auth && data.auth_url) {
+                console.log('Auth required, setting auth URL:', data.auth_url);
+                setAuthUrl(data.auth_url);
+                return;
+            }
+            
+            if (!data.success) {
+                throw new Error(data.message || 'Failed to fetch free time slots');
+            }
+
+            if (!Array.isArray(data.freeSlots)) {
+                console.error('Invalid free slots format:', data.freeSlots);
                 throw new Error('Invalid response format from server');
             }
+
+            console.log('Received free slots:', data.freeSlots);
+            
+            // Map the free slots to the correct format
+            const formattedSlots = data.freeSlots.map((slot: { start: string; end: string }) => {
+                const formattedSlot = {
+                    start: formatTimeFromISO(slot.start),
+                    end: formatTimeFromISO(slot.end)
+                };
+                console.log('Formatted slot:', formattedSlot);
+                return formattedSlot;
+            });
+
+            console.log('Setting formatted slots:', formattedSlots);
+            setFreeSlots(formattedSlots);
+            setHasCheckedTimeSlots(true);  // Set to true after successful check
+
         } catch (error) {
             console.error('Error checking free time:', error);
             setFreeTimeError(error instanceof Error ? error.message : 'Failed to check free time');
             setFreeSlots([]);
+            setHasCheckedTimeSlots(true);  // Set to true even if there's an error
         } finally {
             setIsCheckingFreeTime(false);
         }
@@ -275,6 +340,20 @@ export default function Calendar() {
                 <div className="max-w-4xl mx-auto">
                     <h1 className="text-3xl font-bold text-white mb-8">Study Time Planner</h1>
                     
+                    {/* Email Input */}
+                    <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-[#8B7FFF]/20 p-6 mb-6">
+                        <h2 className="text-xl font-medium text-white mb-4">Your Email</h2>
+                        <div className="w-full max-w-md">
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="Enter your email address"
+                                className="w-full p-3 rounded-lg bg-[#141529]/80 text-white border border-[#8B7FFF]/30 transition-all hover:border-[#8B7FFF]/60 focus:border-[#86efac]/70 focus:ring-1 focus:ring-[#86efac]/50 outline-none backdrop-blur-sm"
+                            />
+                        </div>
+                    </div>
+
                     {/* Date Selection */}
                     <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-[#8B7FFF]/20 p-6 mb-6">
                         <h2 className="text-xl font-medium text-white mb-4">Select a Date</h2>
@@ -302,6 +381,26 @@ export default function Calendar() {
                             ))}
                         </div>
                     </div>
+
+                    {/* Authentication Required Message */}
+                    {authUrl && (
+                        <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-[#8B7FFF]/20 p-6 mb-6">
+                            <h2 className="text-xl font-medium text-white mb-4">Google Calendar Authentication Required</h2>
+                            <div className="p-4 rounded-lg bg-[#86efac]/10 border border-[#86efac]/20">
+                                <p className="text-[#86efac] mb-4">
+                                    To access your calendar, please authenticate with Google Calendar first.
+                                </p>
+                                <a 
+                                    href={authUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-block px-6 py-3 rounded-lg bg-[#86efac]/20 text-[#86efac] border border-[#86efac] hover:bg-[#86efac]/30 transition-colors"
+                                >
+                                    Authenticate with Google Calendar
+                                </a>
+                            </div>
+                        </div>
+                    )}
 
                     {selectedDate && (
                         <>
@@ -429,11 +528,11 @@ export default function Calendar() {
                             </div>
 
                             {/* Free Time Slots */}
-                            {(freeSlots.length > 0 || freeTimeError) && (
-                                <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-[#8B7FFF]/20 p-6">
-                                    <h2 className="text-xl font-medium text-white mb-4">Available Time Slots</h2>
+                            <div className="bg-white/5 backdrop-blur-sm rounded-2xl border border-[#8B7FFF]/20 p-6">
+                                <h2 className="text-xl font-medium text-white mb-4">Available Time Slots</h2>
 
-                                    {freeTimeError ? (
+                                {hasCheckedTimeSlots ? (
+                                    freeTimeError ? (
                                         <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
                                             <div className="flex items-center space-x-2">
                                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -441,6 +540,12 @@ export default function Calendar() {
                                                 </svg>
                                                 <span>{freeTimeError}</span>
                                             </div>
+                                        </div>
+                                    ) : freeSlots.length === 0 ? (
+                                        <div className="p-4 rounded-lg bg-[#86efac]/10 border border-[#86efac]/20">
+                                            <p className="text-[#86efac]/70">
+                                                No available time slots found. Try a different time range.
+                                            </p>
                                         </div>
                                     ) : (
                                         <div className="space-y-3">
@@ -473,9 +578,9 @@ export default function Calendar() {
                                                 </div>
                                             ))}
                                         </div>
-                                    )}
-                                </div>
-                            )}
+                                    )
+                                ) : null}
+                            </div>
                         </>
                     )}
                 </div>
