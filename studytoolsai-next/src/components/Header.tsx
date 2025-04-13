@@ -2,6 +2,10 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
+import { FaRegFileAlt } from 'react-icons/fa';
+import { BsCardText } from 'react-icons/bs';
+import { BsCalendar3 } from 'react-icons/bs';
+import { BsLightbulb } from 'react-icons/bs';
 
 const Header = () => {
     const pathname = usePathname();
@@ -31,12 +35,13 @@ const Header = () => {
                                 href="/pastpapers" 
                                 className="flex flex-col items-center group"
                             >
-                                <span className={`text-lg font-medium transition-colors duration-300 ${
+                                <span className={`flex items-center space-x-2 text-lg font-medium transition-colors duration-300 ${
                                     isActivePath('/pastpapers') 
                                         ? 'text-white' 
                                         : 'text-[#B39DDB] group-hover:text-white'
                                 }`}>
-                                    Past Papers
+                                    <FaRegFileAlt className="w-4 h-4" />
+                                    <span>Past Papers</span>
                                 </span>
                                 <span className={`h-[2px] ${
                                     isActivePath('/pastpapers')
@@ -48,12 +53,13 @@ const Header = () => {
                                 href="/flashcards" 
                                 className="flex flex-col items-center group"
                             >
-                                <span className={`text-lg font-medium transition-colors duration-300 ${
+                                <span className={`flex items-center space-x-2 text-lg font-medium transition-colors duration-300 ${
                                     isActivePath('/flashcards') 
                                         ? 'text-white' 
                                         : 'text-[#B39DDB] group-hover:text-white'
                                 }`}>
-                                    Flashcards
+                                    <BsCardText className="w-4 h-4" />
+                                    <span>Flashcards</span>
                                 </span>
                                 <span className={`h-[2px] ${
                                     isActivePath('/flashcards')
@@ -65,12 +71,13 @@ const Header = () => {
                                 href="/calendar" 
                                 className="flex flex-col items-center group"
                             >
-                                <span className={`text-lg font-medium transition-colors duration-300 ${
+                                <span className={`flex items-center space-x-2 text-lg font-medium transition-colors duration-300 ${
                                     isActivePath('/calendar') 
                                         ? 'text-white' 
                                         : 'text-[#B39DDB] group-hover:text-white'
                                 }`}>
-                                    Calendar
+                                    <BsCalendar3 className="w-4 h-4" />
+                                    <span>Calendar</span>
                                 </span>
                                 <span className={`h-[2px] ${
                                     isActivePath('/calendar')
@@ -82,12 +89,13 @@ const Header = () => {
                                 href="/teachback" 
                                 className="flex flex-col items-center group"
                             >
-                                <span className={`text-lg font-medium transition-colors duration-300 ${
+                                <span className={`flex items-center space-x-2 text-lg font-medium transition-colors duration-300 ${
                                     isActivePath('/teachback') 
                                         ? 'text-white' 
                                         : 'text-[#B39DDB] group-hover:text-white'
                                 }`}>
-                                    TeachBack
+                                    <BsLightbulb className="w-4 h-4" />
+                                    <span>TeachBack</span>
                                 </span>
                                 <span className={`h-[2px] ${
                                     isActivePath('/teachback')

@@ -9,10 +9,12 @@ type Message = {
     content: string;
 };
 
+type Difficulty = 'easy' | 'normal' | 'difficult';
+
 export default function TeachBackPage() {
     const [topic, setTopic] = useState<string>('');
     const [grade, setGrade] = useState<number>(1);
-    const [difficulty, setDifficulty] = useState<string>('normal');
+    const [difficulty, setDifficulty] = useState<Difficulty>('normal');
     const [showChat, setShowChat] = useState<boolean>(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -22,7 +24,7 @@ export default function TeachBackPage() {
     const [errorMessage, setErrorMessage] = useState<string>('');
     const chatContainerRef = useRef<HTMLDivElement>(null);
 
-    const difficulties = ['easy', 'normal', 'difficult'] as const;
+    const difficulties: Difficulty[] = ['easy', 'normal', 'difficult'] as const;
 
     const handleTopicChange = (e: ChangeEvent<HTMLInputElement>) => {
         setTopic(e.target.value);
@@ -33,7 +35,8 @@ export default function TeachBackPage() {
     };
 
     const handleDifficultyChange = (e: ChangeEvent<HTMLInputElement>) => {
-        setDifficulty(difficulties[Number(e.target.value)]);
+        const index = parseInt(e.target.value);
+        setDifficulty(difficulties[index] as Difficulty);
     };
 
     const handleStartRevision = async () => {
@@ -94,7 +97,7 @@ export default function TeachBackPage() {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    messages: [{ role: 'user', content: initialPrompt }],
+                    messages: [{ role: 'user' as const, content: initialPrompt }],
                 }),
             });
             
@@ -109,12 +112,12 @@ export default function TeachBackPage() {
                 throw new Error(data.error);
             }
             
-            setMessages([{ role: 'assistant', content: data.content }]);
+            setMessages([{ role: 'assistant' as const, content: data.content }]);
         } catch (error) {
             console.error('Error getting AI response:', error);
             const errorMsg = error instanceof Error ? error.message : 'Unknown error';
             setErrorMessage(`Error connecting to AI: ${errorMsg}`);
-            setMessages([{ role: 'assistant', content: 'Sorry, there was an error connecting to the AI. Please try again or contact support.' }]);
+            setMessages([{ role: 'assistant' as const, content: 'Sorry, there was an error connecting to the AI. Please try again or contact support.' }]);
         } finally {
             setIsLoading(false);
         }
@@ -127,7 +130,7 @@ export default function TeachBackPage() {
         }
         
         // Add user message to chat
-        const newMessages = [...messages, { role: 'user', content: userMessage }];
+        const newMessages = [...messages, { role: 'user' as const, content: userMessage }];
         setMessages(newMessages);
         setErrorMessage('');
         
@@ -144,7 +147,7 @@ export default function TeachBackPage() {
             const sophisticationLevel = difficulties.indexOf(difficulty);
             
             // System message to maintain personality and handle responses
-            const systemMessage = { role: 'user', content: `Continue the conversation about ${topic} with these guidelines:
+            const systemMessage = { role: 'user' as const, content: `Continue the conversation about ${topic} with these guidelines:
 
             - Maintain your excited, eager-to-learn personality
             - Your cluelessness level is ${cluelessnessLevel}/13
@@ -182,12 +185,12 @@ export default function TeachBackPage() {
                 throw new Error(data.error);
             }
             
-            setMessages([...newMessages, { role: 'assistant', content: data.content }]);
+            setMessages([...newMessages, { role: 'assistant' as const, content: data.content }]);
         } catch (error) {
             console.error('Error getting AI response:', error);
             const errorMsg = error instanceof Error ? error.message : 'Unknown error';
             setErrorMessage(`Error connecting to AI: ${errorMsg}`);
-            setMessages([...newMessages, { role: 'assistant', content: 'Sorry, there was an error connecting to the AI. Please try again or contact support.' }]);
+            setMessages([...newMessages, { role: 'assistant' as const, content: 'Sorry, there was an error connecting to the AI. Please try again or contact support.' }]);
         } finally {
             setIsLoading(false);
         }
@@ -195,7 +198,7 @@ export default function TeachBackPage() {
 
     const handleEndConversation = async () => {
         if (questionCount === 0) {
-            setMessages([...messages, { role: 'assistant', content: 'You need to answer at least one question to receive feedback.' }]);
+            setMessages([...messages, { role: 'assistant' as const, content: 'You need to answer at least one question to receive feedback.' }]);
             return;
         }
         
@@ -204,7 +207,7 @@ export default function TeachBackPage() {
         
         // Don't add the "END" message to the chat
         // Just show a message that the conversation is ending
-        setMessages([...messages, { role: 'assistant', content: 'Ending conversation and generating feedback...' }]);
+        setMessages([...messages, { role: 'assistant' as const, content: 'Ending conversation and generating feedback...' }]);
         
         const feedbackPrompt = `You are providing feedback to a student who has been answering questions about ${topic}. 
         Address the student directly using "you" and "your" (not "the student" or "they").
@@ -212,7 +215,7 @@ export default function TeachBackPage() {
         Keep your feedback concise, encouraging, and specific.
         Start with "Here's your feedback:" and then provide the feedback in a conversational tone.`;
         
-        const newMessages = [...messages, { role: 'user', content: feedbackPrompt }];
+        const newMessages = [...messages, { role: 'user' as const, content: feedbackPrompt }];
         
         setIsLoading(true);
         
@@ -239,13 +242,13 @@ export default function TeachBackPage() {
             }
             
             // Replace the "Ending conversation" message with the feedback
-            setMessages([...messages, { role: 'assistant', content: data.content }]);
+            setMessages([...messages, { role: 'assistant' as const, content: data.content }]);
             setFeedback(data.content);
         } catch (error) {
             console.error('Error getting AI feedback:', error);
             const errorMsg = error instanceof Error ? error.message : 'Unknown error';
             setErrorMessage(`Error getting feedback: ${errorMsg}`);
-            setMessages([...messages, { role: 'assistant', content: 'Sorry, there was an error getting feedback. Please try again or contact support.' }]);
+            setMessages([...messages, { role: 'assistant' as const, content: 'Sorry, there was an error getting feedback. Please try again or contact support.' }]);
         } finally {
             setIsLoading(false);
         }

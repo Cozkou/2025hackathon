@@ -2,13 +2,16 @@
 
 import { useState, ChangeEvent } from 'react';
 
+type Difficulty = 'easy' | 'normal' | 'difficult';
+
+const difficulties: Difficulty[] = ['easy', 'normal', 'difficult'] as const;
+
 export default function TeachBack() {
     const [topic, setTopic] = useState<string>('');
-    const [grade, setGrade] = useState<number>(1);
-    const [difficulty, setDifficulty] = useState<string>('normal');
+    const [grade, setGrade] = useState<number>(7);
+    const [difficulty, setDifficulty] = useState<Difficulty>('normal');
 
     const grades = Array.from({ length: 13 }, (_, i) => i + 1);
-    const difficulties = ['easy', 'normal', 'difficult'] as const;
 
     const handleTopicChange = (e: ChangeEvent<HTMLInputElement>) => {
         setTopic(e.target.value);
@@ -19,7 +22,8 @@ export default function TeachBack() {
     };
 
     const handleDifficultyChange = (e: ChangeEvent<HTMLInputElement>) => {
-        setDifficulty(difficulties[Number(e.target.value)]);
+        const index = parseInt(e.target.value);
+        setDifficulty(difficulties[index] as Difficulty);
     };
 
     return (
